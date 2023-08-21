@@ -30,9 +30,15 @@ $ cmake --build build --target package
 * SDL (pulled in by use of CMake's Fetchcontent)
 * SDL_ttf (pulled in by use of CMake's Fetchcontent)
 
-### Linux / Ubuntu
+### Linux
+
+#### Ubuntu
 
 * Freetype-dev -> install with 'sudo apt install libfreetype-dev'
+
+#### Rocky / Fedora
+
+* Freetype-dev -> install with 'sudo dnf install freetype-devel'
 
 ## Testing
 
