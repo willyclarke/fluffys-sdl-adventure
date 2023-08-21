@@ -60,25 +60,12 @@ auto Deg2Rad(fluffy::math3d::FLOAT Angle) -> fluffy::math3d::FLOAT;
 */
 union tup
 {
-   tup() : X{}, Y{}, Z{}, W{} {};
-   tup(fluffy::math3d::FLOAT IX, fluffy::math3d::FLOAT IY, fluffy::math3d::FLOAT IZ, fluffy::math3d::FLOAT IW)
-       : X{IX}, Y{IY}, Z{IZ}, W{IW} {};
-   tup(fluffy::math3d::FLOAT IX, fluffy::math3d::FLOAT IY) : X{IX}, Y{IY}, Z{}, W{} {};
-   tup(fluffy::math3d::FLOAT IX, fluffy::math3d::FLOAT IY, fluffy::math3d::FLOAT IZ) : X{IX}, Y{IY}, Z{IZ}, W{} {};
-   ~tup() {}
-   tup(tup const &Other)
-   {
-      X = Other.X;
-      Y = Other.Y;
-      Z = Other.Z;
-      W = Other.W;
-   }
    struct  //!< A tuple is initially a vector with four elements or a 3D point.
    {
-      fluffy::math3d::FLOAT X{};
-      fluffy::math3d::FLOAT Y{};
-      fluffy::math3d::FLOAT Z{};
-      fluffy::math3d::FLOAT W{};  //!< is 1.0 when tuple is point and 0.0 when tuple is a vector.
+      fluffy::math3d::FLOAT X;
+      fluffy::math3d::FLOAT Y;
+      fluffy::math3d::FLOAT Z;
+      fluffy::math3d::FLOAT W;  //!< is 1.0 when tuple is point and 0.0 when tuple is a vector.
    };
    struct  //!< A tuple can also represent colors with Intensity
    {
@@ -96,9 +83,9 @@ union tup
 // NOTE: Use a struct to return multiple values.
 struct is_invertible_return
 {
-   bool IsInvertible{};                  // FIXME: (Willy Clarke) Not implemented.
-   bool IsComputed{};                    // FIXME: (Willy Clarke) Not implemented.
-   fluffy::math3d::FLOAT Determinant{};  // FIXME: (Willy Clarke) Not implemented.
+   bool IsInvertible;                  // FIXME: (Willy Clarke) Not implemented.
+   bool IsComputed;                    // FIXME: (Willy Clarke) Not implemented.
+   fluffy::math3d::FLOAT Determinant;  // FIXME: (Willy Clarke) Not implemented.
 };
 
 //------------------------------------------------------------------------------
