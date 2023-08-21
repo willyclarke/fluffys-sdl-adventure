@@ -19,7 +19,6 @@ constexpr int SCREEN_HEIGHT = 600;
 
 namespace
 {
-
 struct cube
 {
    Uint32 Color{};
@@ -59,12 +58,12 @@ struct screen_objects
 /**
  * Do clever things with the screen objects.
  */
-void ProcessScreenObjects(screen_objects& ScreenObjects)
+void ProcessScreenObjects(screen_objects &ScreenObjects)
 {
    if (!ScreenObjects.vCubes.empty())
    {
       // auto M = fluffy::math3d::RotateZ(fluffy::math3d::Deg2Rad(0.1));
-      auto& Cube = ScreenObjects.vCubes[0];
+      auto &Cube = ScreenObjects.vCubes[0];
       auto ZNext = Cube.V[4].Z + 01.0;
       if (ZNext > 50) ZNext = 11;
       Cube.V[4].Z = ZNext;
@@ -87,9 +86,9 @@ void ProcessScreenObjects(screen_objects& ScreenObjects)
 
    if (!ScreenObjects.vTextObjects.empty())
    {
-      for (auto& TextObject : ScreenObjects.vTextObjects)
+      for (auto &TextObject : ScreenObjects.vTextObjects)
       {
-         auto& CurrPos = TextObject.Position;
+         auto &CurrPos = TextObject.Position;
          CurrPos.y += 1;
          if (CurrPos.y > SCREEN_HEIGHT) CurrPos.y = 0;
       }
@@ -106,8 +105,8 @@ void ProcessScreenObjects(screen_objects& ScreenObjects)
 
       if (CurrentTime - ScreenObjects.FpsInfo.StartTime >= 1000)  // If a second has passed
       {
-         ScreenObjects.FpsInfo.FPS =
-             (float)ScreenObjects.FpsInfo.FrameCount;  // fps will be the number of frames rendered in the past second
+         ScreenObjects.FpsInfo.FPS = (float)ScreenObjects.FpsInfo.FrameCount;  // fps will be the number of frames
+                                                                               // rendered in the past second
          ScreenObjects.FpsInfo.Output.Text = std::to_string(int(ScreenObjects.FpsInfo.FPS)) + "fps";
          ScreenObjects.FpsInfo.FrameCount = 0;
          ScreenObjects.FpsInfo.StartTime = CurrentTime;
@@ -115,13 +114,13 @@ void ProcessScreenObjects(screen_objects& ScreenObjects)
    }
 }
 
-void Render(SDL_Surface* screenSurface, screen_objects& ScreenObjects)
+void Render(SDL_Surface *screenSurface, screen_objects &ScreenObjects)
 {
    ProcessScreenObjects(ScreenObjects);
 
    /**
     */
-   for (auto& Cube : ScreenObjects.vCubes)
+   for (auto &Cube : ScreenObjects.vCubes)
    {
       if (Cube.Rotate)
       {
@@ -161,7 +160,7 @@ void Render(SDL_Surface* screenSurface, screen_objects& ScreenObjects)
        */
       if (!ScreenObjects.vTextObjects.empty())
       {
-         auto& BaseTO = ScreenObjects.vTextObjects[0];
+         auto &BaseTO = ScreenObjects.vTextObjects[0];
          fluffy::render::text_fmt PosInfo = BaseTO;
          PosInfo.Position.x = Cube.Pixel[7].X;
          PosInfo.Position.y = Cube.Pixel[7].Y;
@@ -178,7 +177,7 @@ void Render(SDL_Surface* screenSurface, screen_objects& ScreenObjects)
       fluffy::render::Text(screenSurface, ScreenObjects.FpsInfo.Output);
    }
 
-   for (auto& TextObject : ScreenObjects.vTextObjects)
+   for (auto &TextObject : ScreenObjects.vTextObjects)
    {
       break;
       fluffy::render::Text(screenSurface, TextObject);
@@ -196,7 +195,7 @@ void Render(SDL_Surface* screenSurface, screen_objects& ScreenObjects)
 };  // namespace
 
 //-----------------------------------------------------------------------------
-int main(int argc, char* args[])
+int main(int argc, char *args[])
 {
    // Initialize SDL
    if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
@@ -218,7 +217,7 @@ int main(int argc, char* args[])
    ScreenObjects.ResourcePath = fluffy::render::GetResourcePath("");
    SDL_Log("ResourcePath: %s", ScreenObjects.ResourcePath.c_str());
 
-   SDL_Window* ptrWindow = SDL_CreateWindow("SDL Pixel Drawing", SCREEN_WIDTH, SCREEN_HEIGHT,
+   SDL_Window *ptrWindow = SDL_CreateWindow("SDL Pixel Drawing", SCREEN_WIDTH, SCREEN_HEIGHT,
                                             SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_METAL);
    if (!ptrWindow)
    {
@@ -241,8 +240,10 @@ int main(int argc, char* args[])
 
       SDL_GetWindowSize(ptrWindow, &Width, &Height);
       SDL_GetWindowSizeInPixels(ptrWindow, &PixelWidth, &PixelHeight);
-      SDL_Log("Window size reported is : Width:%i Height: %i, PixelWidth: %i PixelHeight: %i", Width, Height,
-              PixelWidth, PixelHeight);
+      SDL_Log(
+          "Window size reported is : Width:%i Height: %i, PixelWidth: %i "
+          "PixelHeight: %i",
+          Width, Height, PixelWidth, PixelHeight);
       if (PixelHeight > Height)
       {
          FontAdjustment = fluffy::math3d::FLOAT(PixelHeight) / Height;
@@ -252,7 +253,7 @@ int main(int argc, char* args[])
    /**
     * Load a font from the resources directory.
     */
-   char const* ptrFontName = "SourceCodePro-Regular.ttf";
+   char const *ptrFontName = "SourceCodePro-Regular.ttf";
    std::string FontName(ptrFontName);
    FontName = ScreenObjects.ResourcePath + "/TTF/" + FontName;
 
@@ -260,7 +261,7 @@ int main(int argc, char* args[])
     * Load the font and try to adjust to the high dpi display if possible.
     */
    int PointSize = static_cast<int>(14 * FontAdjustment);
-   TTF_Font* ptrFont = TTF_OpenFont(FontName.c_str(), PointSize);
+   TTF_Font *ptrFont = TTF_OpenFont(FontName.c_str(), PointSize);
    if (ptrFont == nullptr)
    {
       SDL_Log("TTF_OpenFont: Failed to load  font %s. Error: %s.", ptrFontName, TTF_GetError());
@@ -272,7 +273,7 @@ int main(int argc, char* args[])
    ScreenObjects.FpsInfo.Output.ptrFont = ptrFont;
 
    SDL_Color textColor = {255, 255, 255};
-   SDL_Surface* ptrTextSurface = TTF_RenderUTF8_Solid(ptrFont, "Hello, SDL!", textColor);
+   SDL_Surface *ptrTextSurface = TTF_RenderUTF8_Solid(ptrFont, "Hello, SDL!", textColor);
    if (ptrTextSurface == nullptr)
    {
       SDL_Log("TTF_RenderText_Solid: %s.", TTF_GetError());
@@ -281,7 +282,7 @@ int main(int argc, char* args[])
    }
 
    // Get window surface
-   SDL_Surface* ptrScreenSurface = SDL_GetWindowSurface(ptrWindow);
+   SDL_Surface *ptrScreenSurface = SDL_GetWindowSurface(ptrWindow);
    if (!ptrScreenSurface)
    {
       SDL_Log("Could not get window surface! SDL_Error: %s.", SDL_GetError());
@@ -313,7 +314,8 @@ int main(int argc, char* args[])
    SDL_Event e{};
 
    /**
-    * NOTE: The renders need to be concave when traversing the vertices in a clockwise direction.
+    * NOTE: The renders need to be concave when traversing the vertices in a
+    * clockwise direction.
     */
    fluffy::render::vertice_2d V0{SCREEN_WIDTH / fluffy::math3d::FLOAT(2), SCREEN_HEIGHT / fluffy::math3d::FLOAT(4)};
    fluffy::render::vertice_2d V1{SCREEN_WIDTH / fluffy::math3d::FLOAT(2) + 100,
@@ -339,7 +341,8 @@ int main(int argc, char* args[])
       auto P = ScreenObjects.MatrixConversion * Cube.V[Idx];
       Cube.Pixel[Idx] = {P.X, P.Y};
 
-      // std::cout << "Screen coordinate for Cube[" << Idx << "]:" << P << " with color " << Cube.Color << std::endl;
+      // std::cout << "Screen coordinate for Cube[" << Idx << "]:" << P << " with
+      // color " << Cube.Color << std::endl;
    }
    ScreenObjects.vCubes.push_back(Cube);
 
@@ -435,7 +438,7 @@ int main(int argc, char* args[])
          auto CurrentTimeNSEnd = SDL_GetTicksNS();
          auto TimeSpent = CurrentTimeNSEnd - CurrentTimeNSBegin;
 
-         constexpr fluffy::math3d::FLOAT FPS = 60;
+         constexpr fluffy::math3d::FLOAT FPS = 61;
          constexpr fluffy::math3d::FLOAT DesiredFrameTime =
              fluffy::math3d::FLOAT(1000) / fluffy::math3d::FLOAT(FPS) * 1000000;
 
@@ -464,18 +467,22 @@ int main(int argc, char* args[])
 * The MIT License (MIT)
 Copyright © 2023 <copyright holders>
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
-documentation files (the “Software”), to deal in the Software without restriction, including without limitation the
-rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit
-persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the “Software”), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
-Software.
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
-WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 Ref: https://mit-license.org
 */
