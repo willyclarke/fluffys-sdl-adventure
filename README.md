@@ -30,6 +30,10 @@ $ cmake --build build --target package
 * SDL (pulled in by use of CMake's Fetchcontent)
 * SDL_ttf (pulled in by use of CMake's Fetchcontent)
 
+### Linux / Ubuntu
+
+* Freetype-dev -> install with 'sudo apt install libfreetype-dev'
+
 ## Testing
 
 The project utilize CTest which is pulled down when using CMake to create the build files.
