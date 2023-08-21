@@ -198,7 +198,7 @@ void Render(SDL_Surface *screenSurface, screen_objects &ScreenObjects)
 int main(int argc, char *args[])
 {
    // Initialize SDL
-   if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
+   if (SDL_Init(SDL_INIT_VIDEO) < 0)
    {
       SDL_Log("SDL could not initialize! SDL_Error: %s.", SDL_GetError());
       return 1;
