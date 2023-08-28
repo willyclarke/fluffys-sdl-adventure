@@ -566,3 +566,34 @@ TEST_CASE("math3d", "[rotateverticearoundz]")
       REQUIRE(AllGood == true);
    }
 }
+
+TEST_CASE("math3d", "[splineinit]")
+{
+   auto MatCatmRom = fluffy::math3d::SplineInitCatmullRom();
+   std::cout << MatCatmRom << std::endl;
+   constexpr fluffy::math3d::FLOAT OffsetX = 3;
+   constexpr fluffy::math3d::FLOAT OffsetY = 3;
+   auto P0 = fluffy::math3d::Point(OffsetX + 0, 0, 0);
+   auto P1 = fluffy::math3d::Point(OffsetX + 0, 1, 0);
+   auto P2 = fluffy::math3d::Point(OffsetX + 1, 1, 0);
+   auto P3 = fluffy::math3d::Point(OffsetX + 1, 0, 0);
+
+   auto Mc = fluffy::math3d::MultSpline(MatCatmRom, P0, P1, P2, P3);
+   std::cout << Mc << std::endl;
+
+   auto Pu0 = fluffy::math3d::MultSpline(0, Mc);
+   auto Pu05 = fluffy::math3d::MultSpline(0.5, Mc);
+   auto Pu1 = fluffy::math3d::MultSpline(1, Mc);
+   std::cout << "P at u=0:" << Pu0 << std::endl;
+   std::cout << "P at u=0.5:" << Pu05 << std::endl;
+   std::cout << "P at u=1:" << Pu1 << std::endl;
+
+   constexpr size_t NumVal = 50;
+   fluffy::math3d::FLOAT Increment = fluffy::math3d::FLOAT(1) / fluffy::math3d::FLOAT(NumVal);
+   fluffy::math3d::FLOAT Accu{};
+   for (size_t Idx = 0; Idx < NumVal; ++Idx)
+   {
+      std::cout << fluffy::math3d::MultSpline(Accu, Mc) << std::endl;
+      Accu += Increment;
+   }
+}

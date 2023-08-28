@@ -19,6 +19,10 @@ constexpr int SCREEN_HEIGHT = 600;
 
 namespace
 {
+
+constexpr bool UseColorGradient = true;
+constexpr bool NoColorGradient = false;
+
 struct cube
 {
    Uint32 Color{};
@@ -48,6 +52,14 @@ struct screen_objects
    Uint32 Color{};
    bool UseColorGradient{};
    fluffy::render::vertice_2d V{};
+
+   fluffy::math3d::tup PStart{};
+   fluffy::math3d::tup PEnd{};
+   fluffy::math3d::FLOAT t{};
+   fluffy::math3d::FLOAT tdirection{1};
+   fluffy::render::text_fmt TextSplineInfo{};
+   std::vector<fluffy::math3d::tup> vSpline{};
+
    std::vector<cube> vCubes{};
    std::vector<fluffy::render::text_fmt> vTextObjects{};
    std::string ResourcePath{};
@@ -60,6 +72,68 @@ struct screen_objects
  */
 void ProcessScreenObjects(screen_objects &ScreenObjects)
 {
+   if (ScreenObjects.vSpline.empty())
+   {
+      ScreenObjects.PStart = fluffy::math3d::Point(0, 0, 0);
+      ScreenObjects.PEnd = fluffy::math3d::Point(5, 0, 0);
+   }
+
+   {
+      ScreenObjects.vSpline.clear();
+
+      auto MatCatmRom = fluffy::math3d::SplineInitCatmullRom();
+      // std::cout << MatCatmRom << std::endl;
+
+      /**
+       * Lerp between two points.
+       */
+      auto P0 = ScreenObjects.PStart * (1 - ScreenObjects.t) + ScreenObjects.t * ScreenObjects.PEnd;
+      ScreenObjects.t += (ScreenObjects.tdirection * 0.01);
+      if (ScreenObjects.t > fluffy::math3d::FLOAT(1)) ScreenObjects.tdirection = -1;
+      if (ScreenObjects.t < fluffy::math3d::FLOAT(0)) ScreenObjects.t = 1;
+
+      auto P1 = fluffy::math3d::Point(0, 1, 0);
+      auto P2 = fluffy::math3d::Point(1, 1, 0);
+      auto P3 = fluffy::math3d::Point(1, 0, 0);
+      auto P4 = fluffy::math3d::Point(2, 0, 0);
+      auto P5 = fluffy::math3d::Point(2, 1, 0);
+
+      auto Mc0 = fluffy::math3d::MultSpline(MatCatmRom, P0, P1, P2, P3);
+      auto Mc1 = fluffy::math3d::MultSpline(MatCatmRom, P1, P2, P3, P4);
+      auto Mc2 = fluffy::math3d::MultSpline(MatCatmRom, P2, P3, P4, P5);
+      // std::cout << Mc0 << std::endl;
+
+      constexpr size_t NumVal = 50;
+      fluffy::math3d::FLOAT Increment = fluffy::math3d::FLOAT(1) / fluffy::math3d::FLOAT(NumVal);
+      fluffy::math3d::FLOAT U{};
+
+      for (size_t Idx = 0;  //!<
+           Idx < NumVal;    //!<
+           ++Idx)
+      {
+         ScreenObjects.vSpline.push_back(fluffy::math3d::MultSpline(U, Mc0));
+         U += Increment;
+      }
+
+      U = fluffy::math3d::FLOAT(0);
+      for (size_t Idx = 0;  //!<
+           Idx < NumVal;    //!<
+           ++Idx)
+      {
+         ScreenObjects.vSpline.push_back(fluffy::math3d::MultSpline(U, Mc1));
+         U += Increment;
+      }
+
+      U = fluffy::math3d::FLOAT(0);
+      for (size_t Idx = 0;  //!<
+           Idx < NumVal;    //!<
+           ++Idx)
+      {
+         ScreenObjects.vSpline.push_back(fluffy::math3d::MultSpline(U, Mc2));
+         U += Increment;
+      }
+   }
+
    if (!ScreenObjects.vCubes.empty())
    {
       // auto M = fluffy::math3d::RotateZ(fluffy::math3d::Deg2Rad(0.1));
@@ -117,6 +191,15 @@ void ProcessScreenObjects(screen_objects &ScreenObjects)
 void Render(SDL_Surface *screenSurface, screen_objects &ScreenObjects)
 {
    ProcessScreenObjects(ScreenObjects);
+
+   /**
+    */
+   for (auto const &Point : ScreenObjects.vSpline)
+   {
+      auto V = ScreenObjects.MatrixConversion * Point;
+      fluffy::render::vertice_2d Vert{V.X + 100, V.Y + 250};
+      fluffy::render::DrawCircle(screenSurface, Vert, 2, 0xFFFFFF, NoColorGradient);
+   }
 
    /**
     */
@@ -291,9 +374,6 @@ int main(int argc, char *args[])
       return 1;
    }
 
-   constexpr bool UseColorGradient = true;
-   constexpr bool NoColorGradient = false;
-
    cube Cube{};
    Cube.Color = 0xFF0000;
    Cube.Rotate = true;
@@ -353,6 +433,8 @@ int main(int argc, char *args[])
    TextObject.Text = "Hello Kitty";
    TextObject.ptrFont = ptrFont;
    ScreenObjects.vTextObjects.push_back(TextObject);
+   ScreenObjects.TextSplineInfo.ptrFont = ptrFont;
+   ScreenObjects.TextSplineInfo.Text = "XXXX";
 
    int ScanCount{};
 

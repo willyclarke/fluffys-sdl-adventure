@@ -192,6 +192,11 @@ matrix TranslateScaleRotate(  //!<
     fluffy::math3d::FLOAT AlfaX, fluffy::math3d::FLOAT AlfaY,
     fluffy::math3d::FLOAT AlfaZ  //!< Input rotation in radians.
 );
+
+auto SplineInitCatmullRom() -> matrix;
+auto MultSpline(fluffy::math3d::FLOAT u, matrix const &M) -> tup;
+auto MultSpline(matrix const &M, tup const &P0, tup const &P1, tup const &P2, tup const &P3) -> matrix;
+
 };  // end of namespace math3d
 };  // end of namespace fluffy
 
@@ -201,7 +206,6 @@ matrix TranslateScaleRotate(  //!<
 std::ostream &operator<<(std::ostream &stream, const fluffy::math3d::tup &T);
 std::ostream &operator<<(std::ostream &stream, const fluffy::math3d::matrix &M);
 fluffy::math3d::matrix operator*(fluffy::math3d::matrix const &A, fluffy::math3d::matrix const &B);
-fluffy::math3d::tup operator*(fluffy::math3d::matrix const &A, fluffy::math3d::tup const &T);
 fluffy::math3d::tup operator/(fluffy::math3d::tup const &Tup, fluffy::math3d::FLOAT const S);
 fluffy::math3d::tup operator+(fluffy::math3d::tup const &A, fluffy::math3d::tup const &B);
 fluffy::math3d::tup operator-(fluffy::math3d::tup const &Tup);
@@ -213,7 +217,8 @@ fluffy::math3d::tup operator/(fluffy::math3d::tup const &Tup, fluffy::math3d::FL
 fluffy::math3d::tup operator/(fluffy::math3d::tup const &A, fluffy::math3d::tup const &B);
 fluffy::math3d::tup operator/(fluffy::math3d::FLOAT const A, fluffy::math3d::tup const &B);
 fluffy::math3d::matrix operator*(fluffy::math3d::matrix const &A, fluffy::math3d::matrix const &B);
-fluffy::math3d::tup operator*(fluffy::math3d::matrix const &A, fluffy::math3d::tup const &T);
+fluffy::math3d::tup operator*(fluffy::math3d::matrix const &M, fluffy::math3d::tup const &T);
+fluffy::math3d::tup operator*(fluffy::math3d::tup const &T, fluffy::math3d::matrix const &M);
 bool operator==(fluffy::math3d::tup const &A, fluffy::math3d::tup const &B);
 #endif
 
