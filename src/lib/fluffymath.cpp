@@ -64,21 +64,21 @@ tup Normalize(tup const &Tup)
 //------------------------------------------------------------------------------
 tup Point(FLOAT A, FLOAT B, FLOAT C)
 {
-   tup Result{A, B, C, 1.f};
+   tup Result{A, B, C, FLOAT(1)};
    return (Result);
 }
 
 //------------------------------------------------------------------------------
 tup Point(tup P)
 {
-   P.W = 1.f;
+   P.W = FLOAT(1);
    return P;
 }
 
 //------------------------------------------------------------------------------
 tup Vector(FLOAT A, FLOAT B, FLOAT C)
 {
-   tup Result{A, B, C, 0.f};
+   tup Result{A, B, C, FLOAT(0)};
    return (Result);
 }
 
@@ -88,49 +88,49 @@ tup Vector(tup A)
    // ---
    // NOTE: Use the variable on the stack and convert the incoming tuple to a vector.
    // --
-   A.W = 0.f;
+   A.W = FLOAT(0);
    return A;
 }
 
 //------------------------------------------------------------------------------
 tup VectorXZY(FLOAT X, FLOAT Y, FLOAT Z)
 {
-   tup Result{X, Z, Y, 0.f};
+   tup Result{X, Z, Y, FLOAT(0)};
    return (Result);
 }
 
 //------------------------------------------------------------------------------
 tup VectorXY(FLOAT X, FLOAT Y)
 {
-   tup Result{X, Y, 0.f, 0.f};
+   tup Result{X, Y, FLOAT(0), FLOAT(0)};
    return (Result);
 }
 
 //------------------------------------------------------------------------------
 tup VectorXYZ(tup const &A)
 {
-   tup Result{A.X, A.Y, A.Z, 0.f};
+   tup Result{A.X, A.Y, A.Z, FLOAT(0)};
    return (Result);
 }
 
 //------------------------------------------------------------------------------
 tup VectorYZX(tup const &A)
 {
-   tup Result{A.Y, A.Z, A.X, 0.f};
+   tup Result{A.Y, A.Z, A.X, FLOAT(0)};
    return (Result);
 }
 
 //------------------------------------------------------------------------------
 tup VectorXZY(tup const &A)
 {
-   tup Result{A.X, A.Z, A.Y, 0.f};
+   tup Result{A.X, A.Z, A.Y, FLOAT(0)};
    return (Result);
 }
 
 //------------------------------------------------------------------------------
 tup VectorZXY(tup const &A)
 {
-   tup Result{A.Z, A.X, A.Y, 0.f};
+   tup Result{A.Z, A.X, A.Y, FLOAT(0)};
    return (Result);
 }
 
@@ -140,7 +140,7 @@ tup VectorZXY(tup const &A)
  */
 tup VectorXY(tup const &A)
 {
-   tup Result{A.X, A.Y, 0.f, 0.f};
+   tup Result{A.X, A.Y, FLOAT(0), FLOAT(0)};
    return (Result);
 }
 
@@ -150,7 +150,7 @@ tup VectorXY(tup const &A)
  */
 tup VectorXZ(tup const &A)
 {
-   tup Result{A.X, 0.f, A.Z, 0.f};
+   tup Result{A.X, FLOAT(0), A.Z, FLOAT(0)};
    return (Result);
 }
 
@@ -160,7 +160,7 @@ tup VectorXZ(tup const &A)
  */
 tup VectorZX(tup const &A)
 {
-   tup Result{A.Z, 0.f, A.X, 0.f};
+   tup Result{A.Z, FLOAT(0), A.X, FLOAT(0)};
    return (Result);
 }
 // ---
@@ -549,17 +549,45 @@ matrix Mul(matrix const &A, matrix const &B)
 }
 
 //------------------------------------------------------------------------------
-tup Mul(matrix const &A, tup const &T)
+tup Mul(matrix const &M, tup const &T)
 {
    tup Result{};
-   for (size_t Idx = 0;     ///<!
-        Idx < A.Dimension;  ///<!
-        ++Idx)
+   for (size_t Row = 0;     ///<!
+        Row < M.Dimension;  ///<!
+        ++Row)
    {
-      Result.C[Idx] = Get(A, Idx, 0) * T.C[0] +  //
-                      Get(A, Idx, 1) * T.C[1] +  //
-                      Get(A, Idx, 2) * T.C[2] +  //
-                      Get(A, Idx, 3) * T.C[3];
+      Result.C[Row] = Get(M, Row, 0) * T.C[0] +  //
+                      Get(M, Row, 1) * T.C[1] +  //
+                      Get(M, Row, 2) * T.C[2] +  //
+                      Get(M, Row, 3) * T.C[3];
+   }
+
+   /**
+    * Normalize the resulting point.
+    * Also called the perspective divide in pikumas youtube video: https://youtu.be/EqNcqBdrNyI?t=1628
+    */
+   if (Result.W != 0 && Result.W != FLOAT(1))
+   {
+      Result.X /= Result.W;
+      Result.Y /= Result.W;
+      Result.Z /= Result.W;
+   }
+
+   return (Result);
+}
+
+//------------------------------------------------------------------------------
+tup Mul(tup const &T, matrix const &M)
+{
+   tup Result{};
+   for (size_t Col = 0;     ///<!
+        Col < M.Dimension;  ///<!
+        ++Col)
+   {
+      Result.C[Col] = Get(M, 0, Col) * T.C[0] +  //
+                      Get(M, 1, Col) * T.C[1] +  //
+                      Get(M, 2, Col) * T.C[2] +  //
+                      Get(M, 3, Col) * T.C[3];
    }
 
    /**
@@ -739,6 +767,81 @@ matrix TranslateScaleRotate(                   //!<
    return (M);
 }
 
+/**
+ * Initialize the Catmull Rom matrix.
+ */
+auto SplineInitCatmullRom() -> matrix
+{
+   matrix M = I();
+
+   Set(M, 0, 0, FLOAT(0));
+   Set(M, 0, 1, FLOAT(1));
+
+   Set(M, 1, 0, -FLOAT(0.5));
+   Set(M, 1, 1, FLOAT(0));
+   Set(M, 1, 2, FLOAT(0.5));
+
+   Set(M, 2, 0, FLOAT(1));
+   Set(M, 2, 1, -FLOAT(5) / FLOAT(2));
+   Set(M, 2, 2, FLOAT(2));
+   Set(M, 2, 3, -FLOAT(1) / FLOAT(2));
+
+   Set(M, 3, 0, -FLOAT(1) / FLOAT(2));
+   Set(M, 3, 1, FLOAT(3) / FLOAT(2));
+   Set(M, 3, 2, -FLOAT(3) / FLOAT(2));
+   Set(M, 3, 3, FLOAT(1) / FLOAT(2));
+
+   return M;
+}
+
+/**
+ * Multiply a spline matrix at with a point p.
+ * The resulting matrix is the result of M * [P0,P1,P2,P3]T.
+ * The resulting matrix can be cached until any one of the points change.
+ */
+auto MultSpline(matrix const &M, tup const &P0, tup const &P1, tup const &P2, tup const &P3) -> matrix
+{
+   auto Row0 = M.R0.X * P0 + +M.R0.Y * P1 + M.R0.Z * P2 + M.R0.W * P3;
+   auto Row1 = M.R1.X * P0 + +M.R1.Y * P1 + M.R1.Z * P2 + M.R1.W * P3;
+   auto Row2 = M.R2.X * P0 + +M.R2.Y * P1 + M.R2.Z * P2 + M.R2.W * P3;
+   auto Row3 = M.R3.X * P0 + +M.R3.Y * P1 + M.R3.Z * P2 + M.R3.W * P3;
+
+   matrix Mc{};
+   Set(Mc, 0, 0, Row0.X);
+   Set(Mc, 0, 1, Row0.Y);
+   Set(Mc, 0, 2, Row0.Z);
+   Set(Mc, 0, 3, Row0.W);
+
+   Set(Mc, 1, 0, Row1.X);
+   Set(Mc, 1, 1, Row1.Y);
+   Set(Mc, 1, 2, Row1.Z);
+   Set(Mc, 1, 3, Row1.W);
+
+   Set(Mc, 2, 0, Row2.X);
+   Set(Mc, 2, 1, Row2.Y);
+   Set(Mc, 2, 2, Row2.Z);
+   Set(Mc, 2, 3, Row2.W);
+
+   Set(Mc, 3, 0, Row3.X);
+   Set(Mc, 3, 1, Row3.Y);
+   Set(Mc, 3, 2, Row3.Z);
+   Set(Mc, 3, 3, Row3.W);
+
+   return Mc;
+}
+
+/**
+ * Multiply the combined Mf and the 4 points P0,P1,P2,P3 with the vector v=[1 u u^2 u^3].
+ * u is a floating point value between 0 and 1.
+ */
+auto MultSpline(fluffy::math3d::FLOAT u, matrix const &M) -> tup
+{
+   auto uSquared = u * u;
+   auto uCubic = uSquared * u;
+   auto V = tup{fluffy::math3d::FLOAT(1), u, uSquared, uCubic};
+   auto P = V * M;
+   return P;
+}
 };  // end of namespace math3d
 };  // end of namespace fluffy
 
@@ -811,9 +914,14 @@ fluffy::math3d::matrix operator*(fluffy::math3d::matrix const &A, fluffy::math3d
    return (fluffy::math3d::Mul(A, B));
 }
 
-fluffy::math3d::tup operator*(fluffy::math3d::matrix const &A, fluffy::math3d::tup const &T)
+fluffy::math3d::tup operator*(fluffy::math3d::matrix const &M, fluffy::math3d::tup const &T)
 {
-   return (fluffy::math3d::Mul(A, T));
+   return (fluffy::math3d::Mul(M, T));
+}
+
+fluffy::math3d::tup operator*(fluffy::math3d::tup const &T, fluffy::math3d::matrix const &M)
+{
+   return (fluffy::math3d::Mul(T, M));
 }
 
 fluffy::math3d::tup operator/(fluffy::math3d::tup const &Tup, fluffy::math3d::FLOAT const S)
@@ -831,6 +939,13 @@ fluffy::math3d::tup operator-(fluffy::math3d::tup const &A, fluffy::math3d::tup 
    return fluffy::math3d::Sub(A, B);
 }
 
+fluffy::math3d::tup operator*(fluffy::math3d::FLOAT const S, fluffy::math3d::tup const &B)
+{
+   return fluffy::math3d::tup{S * B.X, S * B.Y, S * B.Z, S * B.W};
+}
+
+fluffy::math3d::tup operator*(fluffy::math3d::tup const &B, fluffy::math3d::FLOAT const S) { return S * B; }
+
 bool operator==(fluffy::math3d::tup const &A, fluffy::math3d::tup const &B) { return fluffy::math3d::Equal(A, B); }
 
 /**
@@ -839,8 +954,8 @@ Copyright © 2023 <copyright holders>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
 documentation files (the “Software”), to deal in the Software without restriction, including without limitation the
-rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit
-persons to whom the Software is furnished to do so, subject to the following conditions:
+rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
 Software.
