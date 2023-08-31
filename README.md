@@ -1,6 +1,5 @@
 # fluffys-sdl-adventure
 
-
 ## Description
 
 Various small apps to develop a small C++ library for 3d math.
@@ -11,7 +10,7 @@ MIT, see the LICENCE file.
 
 ## Build instructions
 
-The project can be build with CMake.
+The project can be built with CMake.
 
 To create the build files:
 
@@ -47,8 +46,7 @@ The project utilize CTest which is pulled down when using CMake to create the bu
 ## Runs on
 
 * OSX using clang++ to compile.
+* Fedora using g++ to compile.
 
 ## Know issues
-
-Build fails on g++ (Linux) due to incorrect definition of aggreagate class.
 
