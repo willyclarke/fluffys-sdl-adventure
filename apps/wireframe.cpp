@@ -456,9 +456,14 @@ int main(int argc, char *args[])
    ScreenObjects.ResourcePath = fluffy::render::GetResourcePath("");
    SDL_Log("ResourcePath: %s", ScreenObjects.ResourcePath.c_str());
 
+#ifdef __APPLE__
+   constexpr Uint32 FLAGS = SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_METAL;
+#else
+   constexpr Uint32 FLAGS = SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY;
+#endif
+
    SDL_Window *ptrWindow =
-       SDL_CreateWindow("SDL Pixel Drawing", screen_dimension::SCREEN_WIDTH, screen_dimension::SCREEN_HEIGHT,
-                        SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_METAL);
+       SDL_CreateWindow("SDL Pixel Drawing", screen_dimension::SCREEN_WIDTH, screen_dimension::SCREEN_HEIGHT, FLAGS);
    if (!ptrWindow)
    {
       SDL_Log("Window could not be created! SDL_Error: %s", SDL_GetError());
