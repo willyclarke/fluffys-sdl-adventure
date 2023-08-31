@@ -8,13 +8,6 @@
 
 #include "drawprimitives.hpp"
 
-namespace
-{
-// FIXME: (Willy Clarke) These need to go
-constexpr int SCREEN_WIDTH = 800;
-constexpr int SCREEN_HEIGHT = 600;
-};  // namespace
-
 namespace fluffy
 {
 namespace render
@@ -47,6 +40,13 @@ auto DrawLine(SDL_Surface* screenSurface,            //!<
          auto Beta = std::abs(Alfa - Gamma);
          Color = uint8_t(Alfa * 0xFF) << 16 | uint8_t(Beta * 0xFF) << 8 | uint8_t(Gamma * 0xFF);
       }
+
+      /**
+       * Check that the pixel is inside the rectangle. Stop drawing when this happens.
+       */
+      if (X > screenSurface->clip_rect.w || Y > screenSurface->clip_rect.h) break;
+      if (X < 0 || Y < 0) break;
+
       ((Uint32*)screenSurface->pixels)[Y * screenSurface->w + X] = Color;
       ++Idx;
    }
@@ -76,14 +76,17 @@ auto DrawCircle(SDL_Surface* screenSurface,                //!<
       auto X = static_cast<int>(V1.X);
       auto Y = static_cast<int>(V1.Y);
 
-      if (X >= 0 && Y >= 0 && X < SCREEN_WIDTH && Y < SCREEN_HEIGHT)
+      /**
+       * Check that the pixel is inside the rectangle. Stop drawing when this happens.
+       */
+      if (X > screenSurface->clip_rect.w || Y > screenSurface->clip_rect.h) break;
+      if (X < 0 || Y < 0) break;
+
+      if (UseColorGradient)
       {
-         if (UseColorGradient)
-         {
-            DrawLine(screenSurface, Center, V1, Color, UseColorGradient);
-         }
-         ((Uint32*)screenSurface->pixels)[Y * screenSurface->w + X] = Color;
+         DrawLine(screenSurface, Center, V1, Color, UseColorGradient);
       }
+      ((Uint32*)screenSurface->pixels)[Y * screenSurface->w + X] = Color;
 
       Angle += AngleDelta;
    }

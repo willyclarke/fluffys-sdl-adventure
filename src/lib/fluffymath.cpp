@@ -64,21 +64,21 @@ tup Normalize(tup const &Tup)
 //------------------------------------------------------------------------------
 tup Point(FLOAT A, FLOAT B, FLOAT C)
 {
-   tup Result{A, B, C, 1.f};
+   tup Result{A, B, C, FLOAT(1)};
    return (Result);
 }
 
 //------------------------------------------------------------------------------
 tup Point(tup P)
 {
-   P.W = 1.f;
+   P.W = FLOAT(1);
    return P;
 }
 
 //------------------------------------------------------------------------------
 tup Vector(FLOAT A, FLOAT B, FLOAT C)
 {
-   tup Result{A, B, C, 0.f};
+   tup Result{A, B, C, FLOAT(0)};
    return (Result);
 }
 
@@ -88,49 +88,49 @@ tup Vector(tup A)
    // ---
    // NOTE: Use the variable on the stack and convert the incoming tuple to a vector.
    // --
-   A.W = 0.f;
+   A.W = FLOAT(0);
    return A;
 }
 
 //------------------------------------------------------------------------------
 tup VectorXZY(FLOAT X, FLOAT Y, FLOAT Z)
 {
-   tup Result{X, Z, Y, 0.f};
+   tup Result{X, Z, Y, FLOAT(0)};
    return (Result);
 }
 
 //------------------------------------------------------------------------------
 tup VectorXY(FLOAT X, FLOAT Y)
 {
-   tup Result{X, Y, 0.f, 0.f};
+   tup Result{X, Y, FLOAT(0), FLOAT(0)};
    return (Result);
 }
 
 //------------------------------------------------------------------------------
 tup VectorXYZ(tup const &A)
 {
-   tup Result{A.X, A.Y, A.Z, 0.f};
+   tup Result{A.X, A.Y, A.Z, FLOAT(0)};
    return (Result);
 }
 
 //------------------------------------------------------------------------------
 tup VectorYZX(tup const &A)
 {
-   tup Result{A.Y, A.Z, A.X, 0.f};
+   tup Result{A.Y, A.Z, A.X, FLOAT(0)};
    return (Result);
 }
 
 //------------------------------------------------------------------------------
 tup VectorXZY(tup const &A)
 {
-   tup Result{A.X, A.Z, A.Y, 0.f};
+   tup Result{A.X, A.Z, A.Y, FLOAT(0)};
    return (Result);
 }
 
 //------------------------------------------------------------------------------
 tup VectorZXY(tup const &A)
 {
-   tup Result{A.Z, A.X, A.Y, 0.f};
+   tup Result{A.Z, A.X, A.Y, FLOAT(0)};
    return (Result);
 }
 
@@ -140,7 +140,7 @@ tup VectorZXY(tup const &A)
  */
 tup VectorXY(tup const &A)
 {
-   tup Result{A.X, A.Y, 0.f, 0.f};
+   tup Result{A.X, A.Y, FLOAT(0), FLOAT(0)};
    return (Result);
 }
 
@@ -150,7 +150,7 @@ tup VectorXY(tup const &A)
  */
 tup VectorXZ(tup const &A)
 {
-   tup Result{A.X, 0.f, A.Z, 0.f};
+   tup Result{A.X, FLOAT(0), A.Z, FLOAT(0)};
    return (Result);
 }
 
@@ -160,7 +160,7 @@ tup VectorXZ(tup const &A)
  */
 tup VectorZX(tup const &A)
 {
-   tup Result{A.Z, 0.f, A.X, 0.f};
+   tup Result{A.Z, FLOAT(0), A.X, FLOAT(0)};
    return (Result);
 }
 // ---

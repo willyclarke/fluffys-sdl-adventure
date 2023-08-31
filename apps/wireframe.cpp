@@ -8,17 +8,27 @@
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
 
+#include <array>
 #include <iostream>
 #include <vector>
 
 #include "../src/lib/drawprimitives.hpp"
 #include "../src/lib/triangle2d.hpp"
 
-constexpr int SCREEN_WIDTH = 800;
-constexpr int SCREEN_HEIGHT = 600;
-
 namespace
 {
+struct screen_dimension
+{
+   static constexpr int SCREEN_WIDTH = 800;
+   static constexpr int SCREEN_HEIGHT = 600;
+
+   int Width{};
+   int Height{};
+   int PixelWidth{};
+   int PixelHeight{};
+};
+
+screen_dimension gScreenDimension{};
 
 constexpr bool UseColorGradient = true;
 constexpr bool NoColorGradient = false;
@@ -43,7 +53,7 @@ struct fps_info
 
 struct screen_objects
 {
-   fluffy::math3d::FLOAT FOV{90};
+   fluffy::math3d::FLOAT FOV{150};
    fluffy::render::projection Projection{};
    fluffy::math3d::matrix MatrixProjection{};
    fluffy::math3d::matrix MatrixScreen{};
@@ -55,6 +65,7 @@ struct screen_objects
 
    fluffy::math3d::tup PStart{};
    fluffy::math3d::tup PEnd{};
+   std::vector<fluffy::math3d::tup> SplineCtrlPoints{};
    fluffy::math3d::FLOAT t{};
    fluffy::math3d::FLOAT tdirection{1};
    fluffy::render::text_fmt TextSplineInfo{};
@@ -72,38 +83,58 @@ struct screen_objects
  */
 void ProcessScreenObjects(screen_objects &ScreenObjects)
 {
+   /**
+    * Create the control points for the spline to be drawn.
+    */
    if (ScreenObjects.vSpline.empty())
    {
       ScreenObjects.PStart = fluffy::math3d::Point(0, 0, 0);
-      ScreenObjects.PEnd = fluffy::math3d::Point(5, 0, 0);
+      ScreenObjects.PEnd = fluffy::math3d::Point(0, 1, 0);
+      ScreenObjects.SplineCtrlPoints.push_back(ScreenObjects.PStart);
+      ScreenObjects.SplineCtrlPoints.push_back(fluffy::math3d::Point(0, 1, 0));
+      ScreenObjects.SplineCtrlPoints.push_back(fluffy::math3d::Point(1, 1, 0));
+      ScreenObjects.SplineCtrlPoints.push_back(fluffy::math3d::Point(1, 0, 0));
+      ScreenObjects.SplineCtrlPoints.push_back(fluffy::math3d::Point(2, 0, 0));
+      ScreenObjects.SplineCtrlPoints.push_back(fluffy::math3d::Point(2, 1, 0));
+      ScreenObjects.SplineCtrlPoints.push_back(fluffy::math3d::Point(3, 1, 0));
+      ScreenObjects.SplineCtrlPoints.push_back(fluffy::math3d::Point(3, 0, 0));
+      ScreenObjects.SplineCtrlPoints.push_back(ScreenObjects.PEnd);
    }
 
    {
       ScreenObjects.vSpline.clear();
 
       auto MatCatmRom = fluffy::math3d::SplineInitCatmullRom();
-      // std::cout << MatCatmRom << std::endl;
+
+      auto &P0 = ScreenObjects.SplineCtrlPoints[0];
+      auto const &P1 = ScreenObjects.SplineCtrlPoints[1];
+      auto const &P2 = ScreenObjects.SplineCtrlPoints[2];
+      auto const &P3 = ScreenObjects.SplineCtrlPoints[3];
+      auto const &P4 = ScreenObjects.SplineCtrlPoints[4];
+      auto const &P5 = ScreenObjects.SplineCtrlPoints[5];
+      auto const &P6 = ScreenObjects.SplineCtrlPoints[6];
+      auto const &P7 = ScreenObjects.SplineCtrlPoints[7];
 
       /**
        * Lerp between two points.
        */
-      auto P0 = ScreenObjects.PStart * (1 - ScreenObjects.t) + ScreenObjects.t * ScreenObjects.PEnd;
-      ScreenObjects.t += (ScreenObjects.tdirection * 0.01);
-      if (ScreenObjects.t > fluffy::math3d::FLOAT(1)) ScreenObjects.tdirection = -1;
-      if (ScreenObjects.t < fluffy::math3d::FLOAT(0)) ScreenObjects.t = 1;
+      P0 = ScreenObjects.PStart * (1 - ScreenObjects.t) + ScreenObjects.t * ScreenObjects.PEnd;
+      ScreenObjects.t += (ScreenObjects.tdirection * 0.002);
 
-      auto P1 = fluffy::math3d::Point(0, 1, 0);
-      auto P2 = fluffy::math3d::Point(1, 1, 0);
-      auto P3 = fluffy::math3d::Point(1, 0, 0);
-      auto P4 = fluffy::math3d::Point(2, 0, 0);
-      auto P5 = fluffy::math3d::Point(2, 1, 0);
+      /**
+       * Handle rollover of the t.
+       */
+      if (ScreenObjects.t > fluffy::math3d::FLOAT(1)) ScreenObjects.tdirection = -1;
+      if (ScreenObjects.t < fluffy::math3d::FLOAT(0)) ScreenObjects.tdirection = 1;
 
       auto Mc0 = fluffy::math3d::MultSpline(MatCatmRom, P0, P1, P2, P3);
       auto Mc1 = fluffy::math3d::MultSpline(MatCatmRom, P1, P2, P3, P4);
       auto Mc2 = fluffy::math3d::MultSpline(MatCatmRom, P2, P3, P4, P5);
-      // std::cout << Mc0 << std::endl;
+      auto Mc3 = fluffy::math3d::MultSpline(MatCatmRom, P3, P4, P5, P6);
+      auto Mc4 = fluffy::math3d::MultSpline(MatCatmRom, P4, P5, P6, P7);
+      constexpr fluffy::math3d::FLOAT NumSplineElem = 5;
 
-      constexpr size_t NumVal = 50;
+      constexpr size_t NumVal = 20;
       fluffy::math3d::FLOAT Increment = fluffy::math3d::FLOAT(1) / fluffy::math3d::FLOAT(NumVal);
       fluffy::math3d::FLOAT U{};
 
@@ -132,6 +163,62 @@ void ProcessScreenObjects(screen_objects &ScreenObjects)
          ScreenObjects.vSpline.push_back(fluffy::math3d::MultSpline(U, Mc2));
          U += Increment;
       }
+
+      U = fluffy::math3d::FLOAT(0);
+      for (size_t Idx = 0;  //!<
+           Idx < NumVal;    //!<
+           ++Idx)
+      {
+         ScreenObjects.vSpline.push_back(fluffy::math3d::MultSpline(U, Mc3));
+         U += Increment;
+      }
+
+      U = fluffy::math3d::FLOAT(0);
+      for (size_t Idx = 0;  //!<
+           Idx < NumVal;    //!<
+           ++Idx)
+      {
+         ScreenObjects.vSpline.push_back(fluffy::math3d::MultSpline(U, Mc4));
+         U += Increment;
+      }
+
+      /**
+       * Walk along the spline segments and draw a circle.
+       */
+      if (ScreenObjects.t >= 0 && ScreenObjects.t < fluffy::math3d::FLOAT(1) / NumSplineElem)
+      {
+         auto t = NumSplineElem * ScreenObjects.t;
+         ScreenObjects.SplineCtrlPoints.pop_back();
+         ScreenObjects.SplineCtrlPoints.push_back(fluffy::math3d::MultSpline(t, Mc0));
+      }
+      else if (ScreenObjects.t >= fluffy::math3d::FLOAT(1) / NumSplineElem &&
+               ScreenObjects.t < fluffy::math3d::FLOAT(2) / NumSplineElem)
+      {
+         auto t = 4 * (ScreenObjects.t - fluffy::math3d::FLOAT(1) / NumSplineElem);
+         ScreenObjects.SplineCtrlPoints.pop_back();
+         ScreenObjects.SplineCtrlPoints.push_back(fluffy::math3d::MultSpline(t, Mc1));
+      }
+      else if (ScreenObjects.t >= fluffy::math3d::FLOAT(2) / NumSplineElem &&
+               ScreenObjects.t < fluffy::math3d::FLOAT(3) / NumSplineElem)
+      {
+         auto t = 4 * (ScreenObjects.t - fluffy::math3d::FLOAT(2) / NumSplineElem);
+         ScreenObjects.SplineCtrlPoints.pop_back();
+         ScreenObjects.SplineCtrlPoints.push_back(fluffy::math3d::MultSpline(t, Mc2));
+      }
+      else if (ScreenObjects.t >= fluffy::math3d::FLOAT(3) / NumSplineElem &&
+               ScreenObjects.t < fluffy::math3d::FLOAT(4) / NumSplineElem)
+      {
+         auto t = 4 * (ScreenObjects.t - fluffy::math3d::FLOAT(3) / NumSplineElem);
+         ScreenObjects.SplineCtrlPoints.pop_back();
+         ScreenObjects.SplineCtrlPoints.push_back(fluffy::math3d::MultSpline(t, Mc3));
+      }
+      else if (ScreenObjects.t >= fluffy::math3d::FLOAT(4) / NumSplineElem &&
+               ScreenObjects.t < fluffy::math3d::FLOAT(5) / NumSplineElem)
+      {
+         auto t = 4 * (ScreenObjects.t - fluffy::math3d::FLOAT(4) / NumSplineElem);
+         ScreenObjects.SplineCtrlPoints.pop_back();
+         ScreenObjects.SplineCtrlPoints.push_back(fluffy::math3d::MultSpline(t, Mc4));
+      }
    }
 
    if (!ScreenObjects.vCubes.empty())
@@ -158,15 +245,17 @@ void ProcessScreenObjects(screen_objects &ScreenObjects)
       }
    }
 
+#if 0
    if (!ScreenObjects.vTextObjects.empty())
    {
       for (auto &TextObject : ScreenObjects.vTextObjects)
       {
          auto &CurrPos = TextObject.Position;
          CurrPos.y += 1;
-         if (CurrPos.y > SCREEN_HEIGHT) CurrPos.y = 0;
+         if (CurrPos.y > gScreenDimension.PixelHeight) CurrPos.y = 0;
       }
    }
+#endif
 
    /**
     * Generate the FPS indicator.
@@ -190,18 +279,98 @@ void ProcessScreenObjects(screen_objects &ScreenObjects)
 
 void Render(SDL_Surface *screenSurface, screen_objects &ScreenObjects)
 {
+   auto UpdateTextObjects = ScreenObjects.vSpline.empty();
+
    ProcessScreenObjects(ScreenObjects);
 
    /**
+    * Set up text for the different points of the spline.
+    * This needs to be done in Pixelpos?
     */
-   for (auto const &Point : ScreenObjects.vSpline)
+   if (UpdateTextObjects && !ScreenObjects.vSpline.empty())
    {
-      auto V = ScreenObjects.MatrixConversion * Point;
-      fluffy::render::vertice_2d Vert{V.X + 100, V.Y + 250};
-      fluffy::render::DrawCircle(screenSurface, Vert, 2, 0xFFFFFF, NoColorGradient);
+      fluffy::render::text_fmt TextObject{};
+      TextObject.ptrFont = ScreenObjects.TextSplineInfo.ptrFont;
+
+      auto SetPointText = [&](fluffy::math3d::matrix const &MatrixConversion,
+                              std::vector<fluffy::math3d::tup> const &SplineCtrlPoints,
+                              fluffy::render::text_fmt &TextObject, size_t Idx) -> void
+      {
+         auto const NumElem = SplineCtrlPoints.size();
+         if (Idx >= NumElem) return;
+
+         TextObject.Text = "P" + std::to_string(Idx);
+         auto V = MatrixConversion * SplineCtrlPoints[Idx];
+         TextObject.Position.x = V.X;
+         TextObject.Position.y = V.Y;
+         ScreenObjects.vTextObjects.push_back(TextObject);
+      };
+
+      /**
+       * Create the PX text for all but the last element, hence the -1.
+       */
+      for (size_t Idx = 0;                                   //!<
+           Idx < ScreenObjects.SplineCtrlPoints.size() - 1;  //!<
+           ++Idx                                             //!<
+      )
+      {
+         SetPointText(ScreenObjects.MatrixConversion, ScreenObjects.SplineCtrlPoints, TextObject, Idx);
+      }
    }
 
    /**
+    * Do the actual printing of the Text objects.
+    */
+   for (auto &TextObject : ScreenObjects.vTextObjects)
+   {
+      fluffy::render::Text(screenSurface, TextObject);
+   }
+
+   {
+      /**
+       * Draw the spline and the corresponding control points.
+       * 1. A lambda for ease of drawing.
+       * 2. The points on the spline.
+       * 3. The control points.
+       */
+
+      auto PlotPoint = [&](fluffy::math3d::tup const &Point, int Color = 0xFFFFFF, int RadiusInPixels = 2) -> void
+      {
+         auto V = ScreenObjects.MatrixConversion * Point;
+         fluffy::render::vertice_2d Vert{V.X, V.Y};
+         fluffy::render::DrawCircle(screenSurface, Vert, RadiusInPixels, Color, NoColorGradient);
+      };
+
+      /**
+       * Draw the actual spline between the points.
+       */
+      for (auto const &Point : ScreenObjects.vSpline)
+      {
+         PlotPoint(Point, 0xFF);
+      }
+
+      /**
+       * Draw the control points to show how the spline is pulled and pushed.
+       */
+      {
+         PlotPoint(ScreenObjects.PStart, 0x00FF00, 10);
+         PlotPoint(ScreenObjects.PEnd, 0x00FF00, 10);
+
+         auto const NumElem = ScreenObjects.SplineCtrlPoints.size();
+         size_t Idx{};
+         while (Idx < NumElem)
+         {
+            PlotPoint(ScreenObjects.SplineCtrlPoints[Idx], 0xAABBCC, 10);
+            ++Idx;
+         }
+      }
+   }
+
+/**
+ */
+#if 0
+   /**
+    * Draw all the cubes.
     */
    for (auto &Cube : ScreenObjects.vCubes)
    {
@@ -244,7 +413,8 @@ void Render(SDL_Surface *screenSurface, screen_objects &ScreenObjects)
       if (!ScreenObjects.vTextObjects.empty())
       {
          auto &BaseTO = ScreenObjects.vTextObjects[0];
-         fluffy::render::text_fmt PosInfo = BaseTO;
+         fluffy::render::text_fmt PosInfo{};
+         PosInfo.ptrFont = BaseTO.ptrFont;
          PosInfo.Position.x = Cube.Pixel[7].X;
          PosInfo.Position.y = Cube.Pixel[7].Y;
          auto strX = std::to_string(PosInfo.Position.x);
@@ -253,27 +423,13 @@ void Render(SDL_Surface *screenSurface, screen_objects &ScreenObjects)
          fluffy::render::Text(screenSurface, PosInfo);
          // TTF_SetFontSizeDPI(PosInfo.ptrFont, 14, 140, 140);
       }
-
-      /**
-       * Display the FPS.
-       */
-      fluffy::render::Text(screenSurface, ScreenObjects.FpsInfo.Output);
    }
+#endif
 
-   for (auto &TextObject : ScreenObjects.vTextObjects)
-   {
-      break;
-      fluffy::render::Text(screenSurface, TextObject);
-      auto t = fluffy::math3d::FLOAT(TextObject.Position.y) / fluffy::math3d::FLOAT(SCREEN_HEIGHT);
-      constexpr int MinFontSize = 8;
-      constexpr int MaxFontSize = 30;
-      constexpr int MinDpi = 96;
-      constexpr int MaxDpi = 240;
-      int ptsize = (1 - t) * MinFontSize + t * MaxFontSize;
-      int dpi = (1 - t) * MinDpi + t * MaxDpi;
-      // TTF_SetFontSize(TextObject.ptrFont, ptsize);
-      TTF_SetFontSizeDPI(TextObject.ptrFont, ptsize, dpi, dpi);
-   }
+   /**
+    * Display the FPS.
+    */
+   fluffy::render::Text(screenSurface, ScreenObjects.FpsInfo.Output);
 }
 };  // namespace
 
@@ -300,8 +456,9 @@ int main(int argc, char *args[])
    ScreenObjects.ResourcePath = fluffy::render::GetResourcePath("");
    SDL_Log("ResourcePath: %s", ScreenObjects.ResourcePath.c_str());
 
-   SDL_Window *ptrWindow = SDL_CreateWindow("SDL Pixel Drawing", SCREEN_WIDTH, SCREEN_HEIGHT,
-                                            SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_METAL);
+   SDL_Window *ptrWindow =
+       SDL_CreateWindow("SDL Pixel Drawing", screen_dimension::SCREEN_WIDTH, screen_dimension::SCREEN_HEIGHT,
+                        SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_METAL);
    if (!ptrWindow)
    {
       SDL_Log("Window could not be created! SDL_Error: %s", SDL_GetError());
@@ -316,20 +473,16 @@ int main(int argc, char *args[])
     */
    fluffy::math3d::FLOAT FontAdjustment{1};
    {
-      int Width{};
-      int Height{};
-      int PixelWidth{};
-      int PixelHeight{};
-
-      SDL_GetWindowSize(ptrWindow, &Width, &Height);
-      SDL_GetWindowSizeInPixels(ptrWindow, &PixelWidth, &PixelHeight);
+      SDL_GetWindowSize(ptrWindow, &gScreenDimension.Width, &gScreenDimension.Height);
+      SDL_GetWindowSizeInPixels(ptrWindow, &gScreenDimension.PixelWidth, &gScreenDimension.PixelHeight);
       SDL_Log(
           "Window size reported is : Width:%i Height: %i, PixelWidth: %i "
           "PixelHeight: %i",
-          Width, Height, PixelWidth, PixelHeight);
-      if (PixelHeight > Height)
+          gScreenDimension.Width, gScreenDimension.Height, gScreenDimension.PixelWidth, gScreenDimension.PixelHeight);
+
+      if (gScreenDimension.PixelHeight > gScreenDimension.Height)
       {
-         FontAdjustment = fluffy::math3d::FLOAT(PixelHeight) / Height;
+         FontAdjustment = fluffy::math3d::FLOAT(gScreenDimension.PixelHeight) / gScreenDimension.Height;
       }
    }
 
@@ -393,19 +546,8 @@ int main(int argc, char *args[])
    // Event handler
    SDL_Event e{};
 
-   /**
-    * NOTE: The renders need to be concave when traversing the vertices in a
-    * clockwise direction.
-    */
-   fluffy::render::vertice_2d V0{SCREEN_WIDTH / fluffy::math3d::FLOAT(2), SCREEN_HEIGHT / fluffy::math3d::FLOAT(4)};
-   fluffy::render::vertice_2d V1{SCREEN_WIDTH / fluffy::math3d::FLOAT(2) + 100,
-                                 SCREEN_HEIGHT / fluffy::math3d::FLOAT(2)};
-   fluffy::render::vertice_2d V2{SCREEN_WIDTH / fluffy::math3d::FLOAT(2) - 100,
-                                 SCREEN_HEIGHT / fluffy::math3d::FLOAT(2) - 100};
-   fluffy::render::vertice_2d V3{V1.X, V0.Y};
-
-   ScreenObjects.Projection =
-       fluffy::render::Projection(SCREEN_WIDTH, SCREEN_HEIGHT, fluffy::math3d::Deg2Rad(ScreenObjects.FOV), -10, 100);
+   ScreenObjects.Projection = fluffy::render::Projection(gScreenDimension.PixelWidth, gScreenDimension.PixelHeight,
+                                                         fluffy::math3d::Deg2Rad(ScreenObjects.FOV), -10, 100);
    ScreenObjects.MatrixProjection = fluffy::render::Projection(ScreenObjects.Projection);
    ScreenObjects.MatrixScreen = fluffy::render::ScreenCoord(ScreenObjects.Projection);
    ScreenObjects.MatrixConversion = ScreenObjects.MatrixScreen * ScreenObjects.MatrixProjection;
@@ -420,21 +562,13 @@ int main(int argc, char *args[])
    {
       auto P = ScreenObjects.MatrixConversion * Cube.V[Idx];
       Cube.Pixel[Idx] = {P.X, P.Y};
-
-      // std::cout << "Screen coordinate for Cube[" << Idx << "]:" << P << " with
-      // color " << Cube.Color << std::endl;
    }
    ScreenObjects.vCubes.push_back(Cube);
 
    /**
-    * Texts to display.
+    * Copy the font pointer into an object in ScreenObjects for reference only.
     */
-   fluffy::render::text_fmt TextObject{};
-   TextObject.Text = "Hello Kitty";
-   TextObject.ptrFont = ptrFont;
-   ScreenObjects.vTextObjects.push_back(TextObject);
    ScreenObjects.TextSplineInfo.ptrFont = ptrFont;
-   ScreenObjects.TextSplineInfo.Text = "XXXX";
 
    int ScanCount{};
 
@@ -489,20 +623,6 @@ int main(int argc, char *args[])
       Render(ptrScreenSurface, ScreenObjects);
 
       ++ScanCount;
-
-      SDL_Rect textPosition{};
-      textPosition.x = 100;
-      textPosition.y = ScanCount % SCREEN_HEIGHT;
-      // textPosition.w = ptrTextSurface->w;  // Width of the text
-      // textPosition.h = ptrTextSurface->h;  // Height of the text
-      // textPosition.w = TextObject.ptrSurface->w;
-      // textPosition.h = TextObject.ptrSurface->h;
-      TextObject.Position = textPosition;
-      TextObject.Text = "ScanCount:" + std::to_string(ScanCount);
-      TextObject.Dirty = true;
-
-      // SDL_BlitSurface(ptrTextSurface, NULL, screenSurface, &textPosition);
-      fluffy::render::Text(ptrScreenSurface, TextObject);
 
       // Unlock the surface
       if (SDL_MUSTLOCK(ptrScreenSurface))

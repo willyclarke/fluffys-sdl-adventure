@@ -225,7 +225,11 @@ auto Projection(fluffy::render::projection const& ProjIn) -> fluffy::math3d::mat
    Assert(ProjIn.Theta > math3d::FLOAT(0), __FUNCTION__, __LINE__);
    Assert(ProjIn.ZFar > ProjIn.ZNear, __FUNCTION__, __LINE__);
 
-   math3d::matrix Mp{};
+   /**
+    * FIXME: (Willy Clarke) Verify correctness of unit matrix assignment here...
+    */
+   math3d::matrix Mp = math3d::I();
+
    auto const OneOverThetaHalf = math3d::FLOAT(1) / std::tan(ProjIn.Theta / math3d::FLOAT(2));
 
    /**
