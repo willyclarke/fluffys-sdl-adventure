@@ -1,13 +1,18 @@
-#include <cmath>
-#include <iomanip>  // for std::setprecision
-#include <iostream>
+/**
+ * Fluffy's 3D math library.
+ */
 
 /**
  * License : MIT. See bottom of file.
  * Copyright : Willy Clarke.
  */
 
+#include <cmath>
+#include <iomanip>  // for std::setprecision
+#include <iostream>
+
 #include "fluffymath.hpp"
+
 namespace fluffy
 {
 namespace math3d

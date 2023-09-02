@@ -1,12 +1,16 @@
 #ifndef FLUFFY_FLUFFYMATH_HPP_D3C5C0B4_20C1_4CBF_9C68_961E59FF5A48
 #define FLUFFY_FLUFFYMATH_HPP_D3C5C0B4_20C1_4CBF_9C68_961E59FF5A48
+/**
+ * Fluffy's 3D math library.
+ */
 
 /**
  * License : MIT. See bottom of file.
  * Copyright : Willy Clarke.
  */
 
-#include <tuple>
+#include <iostream>
+
 namespace fluffy
 {
 
