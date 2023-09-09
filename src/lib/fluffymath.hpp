@@ -197,9 +197,10 @@ matrix TranslateScaleRotate(  //!<
     fluffy::math3d::FLOAT AlfaZ  //!< Input rotation in radians.
 );
 
-auto SplineInitCatmullRom() -> matrix;
+auto SplineMatrixCatmullRom() -> matrix;
 auto MultSpline(fluffy::math3d::FLOAT u, matrix const &M) -> tup;
 auto MultSpline(matrix const &M, tup const &P0, tup const &P1, tup const &P2, tup const &P3) -> matrix;
+auto Lerp(tup const &P0, tup const &P1, FLOAT t) -> tup;
 
 };  // end of namespace math3d
 };  // end of namespace fluffy

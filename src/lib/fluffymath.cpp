@@ -28,7 +28,7 @@ auto Deg2Rad(FLOAT Angle) -> FLOAT { return M_PI * Angle / FLOAT(180); }
 //------------------------------------------------------------------------------
 tup Negate(tup const &Tup)
 {
-   tup const Result{-Tup.X, -Tup.Y, -Tup.Z, -Tup.W};
+   tup const Result{-Tup.X, -Tup.Y, -Tup.Z, Tup.W};
    return (Result);
 }
 
@@ -775,7 +775,7 @@ matrix TranslateScaleRotate(                   //!<
 /**
  * Initialize the Catmull Rom matrix.
  */
-auto SplineInitCatmullRom() -> matrix
+auto SplineMatrixCatmullRom() -> matrix
 {
    matrix M = I();
 
@@ -845,8 +845,21 @@ auto MultSpline(fluffy::math3d::FLOAT u, matrix const &M) -> tup
    auto uCubic = uSquared * u;
    auto V = tup{fluffy::math3d::FLOAT(1), u, uSquared, uCubic};
    auto P = V * M;
+   P.W = fluffy::math3d::FLOAT(1);  //!< Ensure that the point can be referenced with W=1.
    return P;
 }
+
+/**
+ * Linear extrapolation between two points.
+ * NOTE: Always returns a point, so W=1.
+ */
+auto Lerp(tup const &P0, tup const &P1, FLOAT t) -> tup
+{
+   auto Pt = (FLOAT(1) - t) * P0 + t * P1;
+   Pt.W = FLOAT(1);
+   return Pt;
+}
+
 };  // end of namespace math3d
 };  // end of namespace fluffy
 
@@ -946,6 +959,10 @@ fluffy::math3d::tup operator-(fluffy::math3d::tup const &A, fluffy::math3d::tup 
 
 fluffy::math3d::tup operator*(fluffy::math3d::FLOAT const S, fluffy::math3d::tup const &B)
 {
+   /**
+    * NOTE: The scaling need to be applied to W in order to get the spline
+    * calculations to work.
+    */
    return fluffy::math3d::tup{S * B.X, S * B.Y, S * B.Z, S * B.W};
 }
 

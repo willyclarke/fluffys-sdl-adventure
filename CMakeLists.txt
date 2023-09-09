@@ -56,7 +56,12 @@ message(STATUS "sdl3_ttf_SOURCE_DIR: ${sdl3_ttf_SOURCE_DIR}")
 ##############################################################################
 # Add library target with source files
 ##############################################################################
-add_library(drawprimitives src/lib/drawprimitives.cpp src/lib/triangle2d.cpp src/lib/fluffymath.cpp)
+add_library(drawprimitives
+  src/lib/drawprimitives.cpp
+  src/lib/triangle2d.cpp
+  src/lib/fluffymath.cpp
+  src/lib/splines.cpp
+)
 
 ##############################################################################
 # Link SDL libraries to the executable
@@ -100,7 +105,11 @@ enable_testing()
 set(TEST_FILES tests/test1.cpp)
 
 # Add test executable
-add_executable(tests ${TEST_FILES} src/lib/triangle2d.cpp src/lib/fluffymath.cpp)
+add_executable(tests ${TEST_FILES}
+  src/lib/triangle2d.cpp
+  src/lib/fluffymath.cpp
+  src/lib/splines.cpp
+)
 
 # Link test executable with Catch2 and your project libraries
 target_link_libraries(tests Catch2::Catch2WithMain)

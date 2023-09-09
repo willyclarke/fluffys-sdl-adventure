@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "../src/lib/splines.hpp"
 #include "../src/lib/triangle2d.hpp"
 
 #include <iostream>
@@ -569,8 +570,8 @@ TEST_CASE("math3d", "[rotateverticearoundz]")
 
 TEST_CASE("math3d", "[splineinit]")
 {
-   auto MatCatmRom = fluffy::math3d::SplineInitCatmullRom();
-   std::cout << MatCatmRom << std::endl;
+   auto MatCatmRom = fluffy::math3d::SplineMatrixCatmullRom();
+   // std::cout << MatCatmRom << std::endl;
    constexpr fluffy::math3d::FLOAT OffsetX = 3;
    constexpr fluffy::math3d::FLOAT OffsetY = 3;
    auto P0 = fluffy::math3d::Point(OffsetX + 0, 0, 0);
@@ -579,21 +580,84 @@ TEST_CASE("math3d", "[splineinit]")
    auto P3 = fluffy::math3d::Point(OffsetX + 1, 0, 0);
 
    auto Mc = fluffy::math3d::MultSpline(MatCatmRom, P0, P1, P2, P3);
-   std::cout << Mc << std::endl;
+   // std::cout << Mc << std::endl;
 
    auto Pu0 = fluffy::math3d::MultSpline(0, Mc);
    auto Pu05 = fluffy::math3d::MultSpline(0.5, Mc);
    auto Pu1 = fluffy::math3d::MultSpline(1, Mc);
-   std::cout << "P at u=0:" << Pu0 << std::endl;
-   std::cout << "P at u=0.5:" << Pu05 << std::endl;
-   std::cout << "P at u=1:" << Pu1 << std::endl;
+   // std::cout << "P at u=0:" << Pu0 << std::endl;
+   // std::cout << "P at u=0.5:" << Pu05 << std::endl;
+   // std::cout << "P at u=1:" << Pu1 << std::endl;
 
    constexpr size_t NumVal = 50;
    fluffy::math3d::FLOAT Increment = fluffy::math3d::FLOAT(1) / fluffy::math3d::FLOAT(NumVal);
    fluffy::math3d::FLOAT Accu{};
    for (size_t Idx = 0; Idx < NumVal; ++Idx)
    {
-      std::cout << fluffy::math3d::MultSpline(Accu, Mc) << std::endl;
+      // std::cout << fluffy::math3d::MultSpline(Accu, Mc) << std::endl;
       Accu += Increment;
    }
+}
+
+TEST_CASE("splines", "[splineinit]")
+{
+   std::vector<fluffy::math3d::tup> vP{};
+   /**
+    * Create the beginning of a square wave.
+    */
+   constexpr fluffy::math3d::FLOAT Yoffs = 2;
+   vP.push_back(fluffy::math3d::Point(-1, 0 + Yoffs, 0));
+   vP.push_back(fluffy::math3d::Point(0, 0 + Yoffs, 0));
+   vP.push_back(fluffy::math3d::Point(0, 1 + Yoffs, 0));
+   vP.push_back(fluffy::math3d::Point(1, 1 + Yoffs, 0));
+   vP.push_back(fluffy::math3d::Point(1, 0 + Yoffs, 0));
+   vP.push_back(fluffy::math3d::Point(2, 0 + Yoffs, 0));
+
+   fluffy::splines::spline_catmull_rom Spline = fluffy::splines::InitCatmullRom(vP);
+
+   /**
+    * Size should differ by 2 since the start and end points are added.
+    */
+   REQUIRE(vP.size() == Spline.CtrlPoints.size() - 2);
+   REQUIRE(Spline.vMatSeg.size() == Spline.CtrlPoints.size() - 3);
+
+   fluffy::math3d::FLOAT t{};
+   auto Result = fluffy::splines::SplineValueCatmullRom(Spline, t);
+   // std::cout << "Result at t=" << t << " is " << Result.P << std::endl;
+
+   t = 0.5;
+   Result = fluffy::splines::SplineValueCatmullRom(Spline, t);
+   // std::cout << "Result at t=" << t << " is " << Result.P << std::endl;
+
+   t = 1.0;
+   Result = fluffy::splines::SplineValueCatmullRom(Spline, t);
+   // std::cout << "Result at t=" << t << " is " << Result.P << std::endl;
+
+   constexpr fluffy::math3d::FLOAT Deltat = 0.05;
+   t = 0;
+   while (t < fluffy::math3d::FLOAT(1))
+   {
+      Spline.vSpline.push_back(fluffy::splines::SplineValueCatmullRom(Spline, t));
+      t += Deltat;
+   }
+
+#if 0
+   for (auto const &SplinePoint : Spline.vSpline)
+   {
+      std::cout << SplinePoint.t << " = " << SplinePoint.P << std::endl;
+   }
+#endif
+}
+
+TEST_CASE("math3d", "[lerppoints]")
+{
+   auto P0 = fluffy::math3d::Point(0, 0, 0);
+   auto P1 = fluffy::math3d::Point(1, 0, 0);
+   auto P_t0 = fluffy::math3d::Lerp(P0, P1, 0);
+   auto P_t1 = fluffy::math3d::Lerp(P0, P1, 1);
+   auto P_tminus1 = fluffy::math3d::Lerp(P0, P1, -1);
+
+   REQUIRE((P0 == P_t0) == true);
+   REQUIRE((P1 == P_t1) == true);
+   REQUIRE((-1 == P_tminus1.X) == true);
 }
