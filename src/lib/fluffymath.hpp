@@ -131,6 +131,8 @@ bool ApproxEq(FLOAT A, FLOAT B, FLOAT Tolerance);
 /**
  * Tuple functions.
  */
+FLOAT MagSquared(tup const &Vector);
+FLOAT Mag(tup const &Vector);
 tup Mul(tup const A, tup const B);
 tup Mul(fluffy::math3d::FLOAT const S, tup const &Tup);
 tup Negate(tup const &Tup);
@@ -142,6 +144,7 @@ tup Sub(tup const &A, tup const &B);
 tup Sin(tup const &Input);
 tup Vector(fluffy::math3d::FLOAT A, fluffy::math3d::FLOAT B, fluffy::math3d::FLOAT C);
 tup Vector(tup A);
+tup Vector(tup const &To, tup const &From);
 tup VectorXZY(fluffy::math3d::FLOAT X, fluffy::math3d::FLOAT Y, fluffy::math3d::FLOAT Z);
 tup VectorXY(fluffy::math3d::FLOAT X, fluffy::math3d::FLOAT Y);
 tup VectorXYZ(tup const &A);

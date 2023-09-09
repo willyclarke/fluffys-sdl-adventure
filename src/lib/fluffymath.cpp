@@ -32,6 +32,27 @@ tup Negate(tup const &Tup)
    return (Result);
 }
 
+/**
+ * Return the magnitude squared of a vector.
+ */
+FLOAT MagSquared(tup const &Vector)
+{
+   Assert(Vector.W == FLOAT(0), __FUNCTION__, __LINE__);
+
+   FLOAT Result = Vector.X * Vector.X + Vector.Y * Vector.Y + Vector.Z * Vector.Z;
+   return Result;
+}
+
+/**
+ * Return the magnitude of a vector. This corresponds to the length of the vector.
+ */
+FLOAT Mag(tup const &Vector)
+{
+   FLOAT Result = std::sqrt(MagSquared(Vector));
+
+   return Result;
+}
+
 //------------------------------------------------------------------------------
 tup Mul(FLOAT const S, tup const &Tup)
 {
@@ -45,19 +66,6 @@ tup Mul(tup const A, tup const B)
    tup const Result{A.R * B.R, A.G * B.G, A.B * B.B, A.W * B.W};
    return (Result);
 }
-
-//------------------------------------------------------------------------------
-FLOAT MagSquared(tup const &Tup)
-{
-   FLOAT const Result = Tup.X * Tup.X +  //<!
-                        Tup.Y * Tup.Y +  //<!
-                        Tup.Z * Tup.Z +  //<!
-                        Tup.W * Tup.W;   //<!
-   return (Result);
-}
-
-//------------------------------------------------------------------------------
-FLOAT Mag(tup const &Tup) { return (std::sqrt(MagSquared(Tup))); }
 
 //------------------------------------------------------------------------------
 tup Normalize(tup const &Tup)
@@ -88,6 +96,9 @@ tup Vector(FLOAT A, FLOAT B, FLOAT C)
 }
 
 //------------------------------------------------------------------------------
+/**
+ * Returns a tuple with W=0 meaning that the result is a vector.
+ */
 tup Vector(tup A)
 {
    // ---
@@ -95,6 +106,17 @@ tup Vector(tup A)
    // --
    A.W = FLOAT(0);
    return A;
+}
+
+/**
+ * Returns a tuple that makes a the vector 'From' till 'To'.
+ * The W is set to 0 meaning that the result is a Vector.
+ */
+tup Vector(tup const &To, tup const &From)
+{
+   tup Result = To - From;
+   Result.W = FLOAT(0);
+   return Result;
 }
 
 //------------------------------------------------------------------------------

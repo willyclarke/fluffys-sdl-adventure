@@ -661,3 +661,21 @@ TEST_CASE("math3d", "[lerppoints]")
    REQUIRE((P1 == P_t1) == true);
    REQUIRE((-1 == P_tminus1.X) == true);
 }
+
+TEST_CASE("math3d", "[vectorfrompoints]")
+{
+   fluffy::math3d::tup To = fluffy::math3d::Point(1, 1, 1);
+   fluffy::math3d::tup From = fluffy::math3d::Point(0, 0, 0);
+   auto V = fluffy::math3d::Vector(To, From);
+
+   REQUIRE(V.X == fluffy::math3d::FLOAT(1));
+   REQUIRE(V.Y == fluffy::math3d::FLOAT(1));
+   REQUIRE(V.Z == fluffy::math3d::FLOAT(1));
+   REQUIRE(V.W == fluffy::math3d::FLOAT(0));
+
+   auto MS = fluffy::math3d::MagSquared(V);
+   auto Mag = fluffy::math3d::Mag(V);
+
+   REQUIRE(MS == fluffy::math3d::FLOAT(3));
+   REQUIRE(Mag == fluffy::math3d::FLOAT(std::sqrt(3)));
+}
