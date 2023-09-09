@@ -1,5 +1,5 @@
 /**
- * Description: Draw some wireframe objects to veriy projection code.
+ * Description: Draw some wireframe objects to verify projection code.
  *
  * License : MIT. See bottom of file.
  * Copyright : Willy Clarke.
