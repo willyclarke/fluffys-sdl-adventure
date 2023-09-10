@@ -16,9 +16,37 @@
 #include "../src/lib/drawprimitives.hpp"
 #include "../src/lib/splines.hpp"
 #include "../src/lib/triangle2d.hpp"
+#include "SDL_platform.h"
 
 namespace
 {
+struct app_state
+{
+   enum state
+   {
+      NOT_INITIALIZED = 0,  //!<
+      INIT = 1,             //!<
+      TIMEOUT = 2,          //!<
+      UPDATE = 3,           //!<
+   };
+   state State{};
+   state PrvState{};
+   int Count{};
+};
+
+static char const *pStringifyAppState[] = {
+    "NOT_INITIALIZED",  //!<
+    "INIT",             //!<
+    "TIMEOUT",          //!<
+    "UPDATE"            //!<
+};
+
+auto Stringify(app_state const &AppState) -> char const *
+{
+   if (AppState.State > app_state::UPDATE) return nullptr;
+   return pStringifyAppState[size_t(AppState.State)];
+}
+
 struct screen_dimension
 {
    static constexpr int SCREEN_WIDTH = 800;
@@ -80,7 +108,45 @@ struct screen_objects
    fps_info FpsInfo{};
 
    fluffy::splines::spline_catmull_rom Spline1{};
+   app_state AppState{};
 };
+
+/**
+ * Handle state changes.
+ */
+void ProcessState(screen_objects &ScreenObjects)
+{
+   auto &SO = ScreenObjects;
+   auto &AS = SO.AppState;
+   if (AS.State == app_state::NOT_INITIALIZED)
+   {
+      AS.State = app_state::INIT;
+   }
+   else if (AS.State == app_state::INIT)
+   {
+      AS.State = app_state::UPDATE;
+      AS.Count = 0;
+   }
+   else if (AS.State == app_state::TIMEOUT)
+   {
+      AS.State = app_state::UPDATE;
+      AS.Count = 0;
+   }
+   else if (AS.State == app_state::UPDATE)
+   {
+      ++AS.Count;
+      if (AS.Count > 5 * 60)
+      {
+         AS.State = app_state::TIMEOUT;
+      }
+   }
+
+   if (AS.State != AS.PrvState)
+   {
+      SDL_Log("%s -> NEW state is %s", __FUNCTION__, Stringify(AS));
+      AS.PrvState = AS.State;
+   }
+}
 
 /**
  * Do clever things with the screen objects.
@@ -145,6 +211,8 @@ void ProcessScreenObjects(screen_objects &ScreenObjects)
 
 void Render(SDL_Surface *screenSurface, screen_objects &ScreenObjects)
 {
+   ProcessState(ScreenObjects);
+
    auto UpdateTextObjects = ScreenObjects.vSpline.empty();
 
    ProcessScreenObjects(ScreenObjects);
