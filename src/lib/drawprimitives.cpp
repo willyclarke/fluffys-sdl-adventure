@@ -159,6 +159,26 @@ std::string GetResourcePath(const std::string& subDir = "")
    // If a subdirectory is specified, append it to the base path
    return subDir.empty() ? ResourceBasePath : ResourceBasePath + subDir + "/";
 }
+
+/**
+ * Do a Linear Interpolation between two colors.
+ */
+uint32_t LerpColor(uint32_t Color1, uint32_t Color2, float t)
+{
+   uint8_t R1 = (Color1 >> 16) & 0xFF;
+   uint8_t G1 = (Color1 >> 8) & 0xFF;
+   uint8_t B1 = Color1 & 0xFF;
+
+   uint8_t R2 = (Color2 >> 16) & 0xFF;
+   uint8_t G2 = (Color2 >> 8) & 0xFF;
+   uint8_t B2 = Color2 & 0xFF;
+
+   uint8_t R = R1 + (R2 - R1) * t;
+   uint8_t G = G1 + (G2 - G1) * t;
+   uint8_t B = B1 + (B2 - B1) * t;
+
+   return (R << 16) | (G << 8) | B;
+}
 };  // end of namespace render
 };  // end of namespace fluffy
 

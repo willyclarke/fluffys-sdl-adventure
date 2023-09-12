@@ -74,6 +74,7 @@ auto Text(SDL_Surface* screenSurface,  //!<
 
 //-----------------------------------------------------------------------------
 std::string GetResourcePath(const std::string& subDir);
+uint32_t LerpColor(uint32_t Color1, uint32_t Color2, float t);
 
 };  // end of namespace render
 };  // end of namespace fluffy
