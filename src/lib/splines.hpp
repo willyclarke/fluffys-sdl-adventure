@@ -34,6 +34,7 @@ struct spline_catmull_rom
    struct point
    {
       fluffy::math3d::tup P{};
+      fluffy::math3d::tup Col{1, 1, 1, 0};
       fluffy::math3d::FLOAT t{};
       std::size_t Idx{};
    };
