@@ -1,5 +1,5 @@
 /**
- * Description: Draw some wireframe objects to veriy projection code.
+ * Description: Draw some wireframe objects to verify projection code.
  *
  * License : MIT. See bottom of file.
  * Copyright : Willy Clarke.
@@ -9,14 +9,46 @@
 #include <SDL3_ttf/SDL_ttf.h>
 
 #include <array>
+#include <cmath>
 #include <iostream>
+#include <random>
 #include <vector>
 
 #include "../src/lib/drawprimitives.hpp"
+#include "../src/lib/splines.hpp"
 #include "../src/lib/triangle2d.hpp"
+#include "SDL_platform.h"
 
 namespace
 {
+struct app_state
+{
+   enum state
+   {
+      NOT_INITIALIZED = 0,  //!<
+      INIT = 1,             //!<
+      TIMEOUT = 2,          //!<
+      UPDATE = 3,           //!<
+   };
+   state State{};
+   state PrvState{};
+   fluffy::math3d::FLOAT tColorLerp{};
+   int Count{};
+};
+
+static char const *pStringifyAppState[] = {
+    "NOT_INITIALIZED",  //!<
+    "INIT",             //!<
+    "TIMEOUT",          //!<
+    "UPDATE"            //!<
+};
+
+auto Stringify(app_state const &AppState) -> char const *
+{
+   if (AppState.State > app_state::UPDATE) return nullptr;
+   return pStringifyAppState[size_t(AppState.State)];
+}
+
 struct screen_dimension
 {
    static constexpr int SCREEN_WIDTH = 800;
@@ -76,151 +108,109 @@ struct screen_objects
    std::string ResourcePath{};
 
    fps_info FpsInfo{};
+
+   fluffy::splines::spline_catmull_rom Spline1{};
+   std::vector<fluffy::splines::spline_catmull_rom> vSplineCatmullRom{};
+   app_state AppState{};
 };
+
+/**
+ * Handle state changes.
+ */
+void ProcessState(screen_objects &ScreenObjects)
+{
+   auto CreateSpline = [](fluffy::math3d::tup const &Color) -> fluffy::splines::spline_catmull_rom
+   {
+      std::vector<fluffy::math3d::tup> vP{};
+      /**
+       * Generate some random real numbers for the points of a spline.
+       */
+      {
+         std::random_device RandomDevice{};       // Will be used to obtain a seed for the random number engine
+         std::mt19937 Generator(RandomDevice());  // Standard mersenne_twister_engine seeded with rd()
+         std::uniform_real_distribution<> Distribution(2.0, 6.0);
+
+         fluffy::math3d::FLOAT XOffs{1};
+         fluffy::math3d::FLOAT YOffs{};
+         fluffy::math3d::FLOAT ZOffs{1};
+
+         for (int Idx = 0; Idx < 30; ++Idx)
+         {
+            YOffs = Distribution(Generator);
+            auto const P = fluffy::math3d::Point(XOffs, YOffs, ZOffs);
+            vP.push_back(P);
+            XOffs += 1;
+         }
+         auto Spline = fluffy::splines::InitCatmullRom(vP);
+
+         constexpr fluffy::math3d::FLOAT Deltat = 0.0001;
+         fluffy::math3d::FLOAT t = 0;
+
+         while (t < fluffy::math3d::FLOAT(1))
+         {
+            auto SplineValue = fluffy::splines::SplineValueCatmullRom(Spline, t);
+            SplineValue.Col = Color;
+            Spline.vSpline.push_back(SplineValue);
+            t += Deltat;
+         }
+
+         return Spline;
+      }
+   };
+
+   auto &SO = ScreenObjects;
+   auto &AS = SO.AppState;
+   if (AS.State == app_state::NOT_INITIALIZED)
+   {
+      AS.State = app_state::INIT;
+   }
+   else if (AS.State == app_state::INIT)
+   {
+      AS.State = app_state::UPDATE;
+      AS.Count = 0;
+      SO.vSplineCatmullRom.push_back(CreateSpline({1, 1, 1, 0}));
+   }
+   else if (AS.State == app_state::TIMEOUT)
+   {
+      AS.State = app_state::UPDATE;
+      AS.Count = 0;
+      if (SO.vSplineCatmullRom.size() > 10)
+      {
+         SO.vSplineCatmullRom.erase(SO.vSplineCatmullRom.begin());
+         SDL_Log("Deleting the first element of the vSplineCatmullRom");
+      }
+
+      auto DeltatColor = fluffy::math3d::FLOAT(1) / SO.vSplineCatmullRom.size();
+      AS.tColorLerp > 1 ? AS.tColorLerp = 0 : AS.tColorLerp += DeltatColor;
+      auto ColorCatmR = fluffy::math3d::Lerp({0, 0.5, 0.5}, {1, 1, 1}, AS.tColorLerp);
+      ColorCatmR = fluffy::math3d::Normalize(ColorCatmR);
+
+      SDL_Log("Creating spline with color %f %f %f", float(ColorCatmR.R), float(ColorCatmR.G), float(ColorCatmR.B));
+      SO.vSplineCatmullRom.push_back(CreateSpline(ColorCatmR));
+   }
+   else if (AS.State == app_state::UPDATE)
+   {
+      ++AS.Count;
+
+      constexpr int FramesToWait = 30;
+      if (AS.Count > 1 * FramesToWait)
+      {
+         AS.State = app_state::TIMEOUT;
+      }
+   }
+
+   if (AS.State != AS.PrvState)
+   {
+      SDL_Log("%s -> NEW state is %s", __FUNCTION__, Stringify(AS));
+      AS.PrvState = AS.State;
+   }
+}
 
 /**
  * Do clever things with the screen objects.
  */
 void ProcessScreenObjects(screen_objects &ScreenObjects)
 {
-   /**
-    * Create the control points for the spline to be drawn.
-    */
-   if (ScreenObjects.vSpline.empty())
-   {
-      ScreenObjects.PStart = fluffy::math3d::Point(0, 0, 0);
-      ScreenObjects.PEnd = fluffy::math3d::Point(0, 1, 0);
-      ScreenObjects.SplineCtrlPoints.push_back(ScreenObjects.PStart);
-      ScreenObjects.SplineCtrlPoints.push_back(fluffy::math3d::Point(0, 1, 0));
-      ScreenObjects.SplineCtrlPoints.push_back(fluffy::math3d::Point(1, 1, 0));
-      ScreenObjects.SplineCtrlPoints.push_back(fluffy::math3d::Point(1, 0, 0));
-      ScreenObjects.SplineCtrlPoints.push_back(fluffy::math3d::Point(2, 0, 0));
-      ScreenObjects.SplineCtrlPoints.push_back(fluffy::math3d::Point(2, 1, 0));
-      ScreenObjects.SplineCtrlPoints.push_back(fluffy::math3d::Point(3, 1, 0));
-      ScreenObjects.SplineCtrlPoints.push_back(fluffy::math3d::Point(3, 0, 0));
-      ScreenObjects.SplineCtrlPoints.push_back(ScreenObjects.PEnd);
-   }
-
-   {
-      ScreenObjects.vSpline.clear();
-
-      auto MatCatmRom = fluffy::math3d::SplineInitCatmullRom();
-
-      auto &P0 = ScreenObjects.SplineCtrlPoints[0];
-      auto const &P1 = ScreenObjects.SplineCtrlPoints[1];
-      auto const &P2 = ScreenObjects.SplineCtrlPoints[2];
-      auto const &P3 = ScreenObjects.SplineCtrlPoints[3];
-      auto const &P4 = ScreenObjects.SplineCtrlPoints[4];
-      auto const &P5 = ScreenObjects.SplineCtrlPoints[5];
-      auto const &P6 = ScreenObjects.SplineCtrlPoints[6];
-      auto const &P7 = ScreenObjects.SplineCtrlPoints[7];
-
-      /**
-       * Lerp between two points.
-       */
-      P0 = ScreenObjects.PStart * (1 - ScreenObjects.t) + ScreenObjects.t * ScreenObjects.PEnd;
-      ScreenObjects.t += (ScreenObjects.tdirection * 0.002);
-
-      /**
-       * Handle rollover of the t.
-       */
-      if (ScreenObjects.t > fluffy::math3d::FLOAT(1)) ScreenObjects.tdirection = -1;
-      if (ScreenObjects.t < fluffy::math3d::FLOAT(0)) ScreenObjects.tdirection = 1;
-
-      auto Mc0 = fluffy::math3d::MultSpline(MatCatmRom, P0, P1, P2, P3);
-      auto Mc1 = fluffy::math3d::MultSpline(MatCatmRom, P1, P2, P3, P4);
-      auto Mc2 = fluffy::math3d::MultSpline(MatCatmRom, P2, P3, P4, P5);
-      auto Mc3 = fluffy::math3d::MultSpline(MatCatmRom, P3, P4, P5, P6);
-      auto Mc4 = fluffy::math3d::MultSpline(MatCatmRom, P4, P5, P6, P7);
-      constexpr fluffy::math3d::FLOAT NumSplineElem = 5;
-
-      constexpr size_t NumVal = 20;
-      fluffy::math3d::FLOAT Increment = fluffy::math3d::FLOAT(1) / fluffy::math3d::FLOAT(NumVal);
-      fluffy::math3d::FLOAT U{};
-
-      for (size_t Idx = 0;  //!<
-           Idx < NumVal;    //!<
-           ++Idx)
-      {
-         ScreenObjects.vSpline.push_back(fluffy::math3d::MultSpline(U, Mc0));
-         U += Increment;
-      }
-
-      U = fluffy::math3d::FLOAT(0);
-      for (size_t Idx = 0;  //!<
-           Idx < NumVal;    //!<
-           ++Idx)
-      {
-         ScreenObjects.vSpline.push_back(fluffy::math3d::MultSpline(U, Mc1));
-         U += Increment;
-      }
-
-      U = fluffy::math3d::FLOAT(0);
-      for (size_t Idx = 0;  //!<
-           Idx < NumVal;    //!<
-           ++Idx)
-      {
-         ScreenObjects.vSpline.push_back(fluffy::math3d::MultSpline(U, Mc2));
-         U += Increment;
-      }
-
-      U = fluffy::math3d::FLOAT(0);
-      for (size_t Idx = 0;  //!<
-           Idx < NumVal;    //!<
-           ++Idx)
-      {
-         ScreenObjects.vSpline.push_back(fluffy::math3d::MultSpline(U, Mc3));
-         U += Increment;
-      }
-
-      U = fluffy::math3d::FLOAT(0);
-      for (size_t Idx = 0;  //!<
-           Idx < NumVal;    //!<
-           ++Idx)
-      {
-         ScreenObjects.vSpline.push_back(fluffy::math3d::MultSpline(U, Mc4));
-         U += Increment;
-      }
-
-      /**
-       * Walk along the spline segments and draw a circle.
-       */
-      if (ScreenObjects.t >= 0 && ScreenObjects.t < fluffy::math3d::FLOAT(1) / NumSplineElem)
-      {
-         auto t = NumSplineElem * ScreenObjects.t;
-         ScreenObjects.SplineCtrlPoints.pop_back();
-         ScreenObjects.SplineCtrlPoints.push_back(fluffy::math3d::MultSpline(t, Mc0));
-      }
-      else if (ScreenObjects.t >= fluffy::math3d::FLOAT(1) / NumSplineElem &&
-               ScreenObjects.t < fluffy::math3d::FLOAT(2) / NumSplineElem)
-      {
-         auto t = 4 * (ScreenObjects.t - fluffy::math3d::FLOAT(1) / NumSplineElem);
-         ScreenObjects.SplineCtrlPoints.pop_back();
-         ScreenObjects.SplineCtrlPoints.push_back(fluffy::math3d::MultSpline(t, Mc1));
-      }
-      else if (ScreenObjects.t >= fluffy::math3d::FLOAT(2) / NumSplineElem &&
-               ScreenObjects.t < fluffy::math3d::FLOAT(3) / NumSplineElem)
-      {
-         auto t = 4 * (ScreenObjects.t - fluffy::math3d::FLOAT(2) / NumSplineElem);
-         ScreenObjects.SplineCtrlPoints.pop_back();
-         ScreenObjects.SplineCtrlPoints.push_back(fluffy::math3d::MultSpline(t, Mc2));
-      }
-      else if (ScreenObjects.t >= fluffy::math3d::FLOAT(3) / NumSplineElem &&
-               ScreenObjects.t < fluffy::math3d::FLOAT(4) / NumSplineElem)
-      {
-         auto t = 4 * (ScreenObjects.t - fluffy::math3d::FLOAT(3) / NumSplineElem);
-         ScreenObjects.SplineCtrlPoints.pop_back();
-         ScreenObjects.SplineCtrlPoints.push_back(fluffy::math3d::MultSpline(t, Mc3));
-      }
-      else if (ScreenObjects.t >= fluffy::math3d::FLOAT(4) / NumSplineElem &&
-               ScreenObjects.t < fluffy::math3d::FLOAT(5) / NumSplineElem)
-      {
-         auto t = 4 * (ScreenObjects.t - fluffy::math3d::FLOAT(4) / NumSplineElem);
-         ScreenObjects.SplineCtrlPoints.pop_back();
-         ScreenObjects.SplineCtrlPoints.push_back(fluffy::math3d::MultSpline(t, Mc4));
-      }
-   }
-
    if (!ScreenObjects.vCubes.empty())
    {
       // auto M = fluffy::math3d::RotateZ(fluffy::math3d::Deg2Rad(0.1));
@@ -277,8 +267,12 @@ void ProcessScreenObjects(screen_objects &ScreenObjects)
    }
 }
 
+/**
+ */
 void Render(SDL_Surface *screenSurface, screen_objects &ScreenObjects)
 {
+   ProcessState(ScreenObjects);
+
    auto UpdateTextObjects = ScreenObjects.vSpline.empty();
 
    ProcessScreenObjects(ScreenObjects);
@@ -336,10 +330,59 @@ void Render(SDL_Surface *screenSurface, screen_objects &ScreenObjects)
 
       auto PlotPoint = [&](fluffy::math3d::tup const &Point, int Color = 0xFFFFFF, int RadiusInPixels = 2) -> void
       {
-         auto V = ScreenObjects.MatrixConversion * Point;
-         fluffy::render::vertice_2d Vert{V.X, V.Y};
+         auto ScreenPoint = ScreenObjects.MatrixScreen * Point;
+         auto ProjectedPoint = ScreenObjects.MatrixProjection * ScreenPoint;
+         fluffy::render::vertice_2d Vert{ProjectedPoint.X, ProjectedPoint.Y};
+
+         static bool DebugPrint{};
+         if (!DebugPrint && RadiusInPixels == 30)
+         {
+            DebugPrint = true;
+            std::cout << "Input Point:" << Point << std::endl;
+            std::cout << "Vertice:" << Vert << std::endl;
+            std::cout << "ConversionMatrix:" << ScreenObjects.MatrixConversion << std::endl;
+            std::cout << "MatrixScreen:" << ScreenObjects.MatrixScreen << std::endl;
+            std::cout << "MatrixProjection:" << ScreenObjects.MatrixProjection << std::endl;
+            std::cout << "Calc1: " << ScreenObjects.MatrixScreen * Point << std::endl;
+            std::cout << "Calc2: " << ScreenObjects.MatrixProjection * Point << std::endl;
+            std::cout << "Calc3: " << ScreenPoint << std::endl;
+            std::cout << "Calc4: " << ProjectedPoint << std::endl;
+         }
          fluffy::render::DrawCircle(screenSurface, Vert, RadiusInPixels, Color, NoColorGradient);
       };
+
+      {
+         /**
+          * FIXME: (Willy Clarke) : Put the statics into the ScreenObjects struct.
+          * TBA: make these things easy to do and add some documentation.
+          */
+         static fluffy::math3d::FLOAT Z{1};
+         static fluffy::math3d::FLOAT t{};
+         static fluffy::math3d::FLOAT Dir{1};
+         Z = std::lerp(fluffy::math3d::FLOAT(0.3), fluffy::math3d::FLOAT(2), t);
+
+         fluffy::math3d::tup PointP = fluffy::math3d::Point(1, 1, Z);
+         PlotPoint(PointP, 0x00FF00, 30);
+
+         ScreenObjects.Spline1 = fluffy::splines::SplineTestCatmullRom(2.5, 2.5, Z);
+         auto const SplineValue = fluffy::splines::SplineValueCatmullRom(ScreenObjects.Spline1, t);
+         PlotPoint(SplineValue.P, 0xABABAB, 7);
+
+         if (t > 1) Dir = -1;
+         if (t < 0) Dir = 1;
+         t += (Dir * 0.001);
+         fluffy::render::text_fmt tTxt{};
+         tTxt.ptrFont = ScreenObjects.TextSplineInfo.ptrFont;
+         if (tTxt.ptrFont != nullptr)
+         {
+            tTxt.Position.x = 0;
+            tTxt.Position.y = 40;
+            tTxt.Text = "t=" + std::to_string(t) + ". Z=" + std::to_string(Z) +
+                        ". P:" + std::to_string(SplineValue.P.X) + " " + std::to_string(SplineValue.P.Y) + " " +
+                        std::to_string(SplineValue.P.Z);
+            fluffy::render::Text(screenSurface, tTxt);
+         }
+      }
 
       /**
        * Draw the actual spline between the points.
@@ -349,9 +392,66 @@ void Render(SDL_Surface *screenSurface, screen_objects &ScreenObjects)
          PlotPoint(Point, 0xFF);
       }
 
+      for (auto const &Point : ScreenObjects.Spline1.CtrlPoints)
+      {
+         constexpr int Radius = 5;
+         PlotPoint(Point, 0xFF0000, Radius);
+      }
+
+      /**
+       * Render the splines in the vector of splines.
+       */
+      {
+         uint32_t CtrlPointColor{0xFFFFFF};
+         uint32_t SplineColorFrom{0x000FFF};
+         uint32_t SplineColorTo{0xFFFFFF};
+
+         auto ldaConvCol = [](fluffy::math3d::tup const &ColIn) -> uint32_t
+         {
+            uint32_t const Col =                                          //!<
+                (uint32_t(ColIn.W * fluffy::math3d::FLOAT(255)) << 24)    //!<
+                | (uint32_t(ColIn.R * fluffy::math3d::FLOAT(255)) << 16)  //!<
+                | (uint32_t(ColIn.G * fluffy::math3d::FLOAT(255)) << 8)   //!<
+                | (uint32_t(ColIn.B * fluffy::math3d::FLOAT(255)) << 0)   //!<
+                ;
+
+            return Col;
+         };
+
+         fluffy::math3d::FLOAT NumSplines = ScreenObjects.vSplineCatmullRom.size();
+         fluffy::math3d::FLOAT DeltaColor = (SplineColorTo - SplineColorFrom) / NumSplines;
+         fluffy::math3d::FLOAT DeltaAlpha = fluffy::math3d::FLOAT(1) / ScreenObjects.vSplineCatmullRom.size();
+         fluffy::math3d::FLOAT Alpha{DeltaAlpha};
+
+         for (auto const &Spline : ScreenObjects.vSplineCatmullRom)
+         {
+            for (auto const &CtrlPoint : Spline.CtrlPoints)
+            {
+               constexpr int Radius = 5;
+               PlotPoint(CtrlPoint, CtrlPointColor, Radius);
+            }
+
+            for (auto const &SplineValue : Spline.vSpline)
+            {
+               constexpr int Radius = 1;
+               auto Col = SplineValue.Col;
+               Col.W = Alpha;
+               PlotPoint(SplineValue.P, ldaConvCol(Col), Radius);
+            }
+
+            Alpha += DeltaAlpha;
+         }
+      }
+
+      for (auto const &SplineValue : ScreenObjects.Spline1.vSpline)
+      {
+         PlotPoint(SplineValue.P, 0xFF);
+      }
+
       /**
        * Draw the control points to show how the spline is pulled and pushed.
        */
+      if (1)
       {
          PlotPoint(ScreenObjects.PStart, 0x00FF00, 10);
          PlotPoint(ScreenObjects.PEnd, 0x00FF00, 10);
@@ -368,7 +468,7 @@ void Render(SDL_Surface *screenSurface, screen_objects &ScreenObjects)
 
 /**
  */
-#if 0
+#if 1
    /**
     * Draw all the cubes.
     */
@@ -431,6 +531,47 @@ void Render(SDL_Surface *screenSurface, screen_objects &ScreenObjects)
     */
    fluffy::render::Text(screenSurface, ScreenObjects.FpsInfo.Output);
 }
+
+auto InitScreenObjects(screen_objects &ScreenObjects) -> void
+{
+   ScreenObjects.Projection = fluffy::render::Projection(gScreenDimension.PixelWidth, gScreenDimension.PixelHeight,
+                                                         fluffy::math3d::Deg2Rad(ScreenObjects.FOV), -10, 100);
+   ScreenObjects.MatrixProjection = fluffy::render::Projection(ScreenObjects.Projection);
+   ScreenObjects.MatrixScreen = fluffy::render::ScreenCoord(ScreenObjects.Projection);
+   ScreenObjects.MatrixConversion = ScreenObjects.MatrixScreen * ScreenObjects.MatrixProjection;
+
+   cube Cube{};
+   Cube.Color = 0xFF0000;
+   Cube.Rotate = true;
+   Cube.UseColorGradient = UseColorGradient;
+   Cube.V[0] = fluffy::math3d::Point(-1, 1, 10);   //!< a or 0
+   Cube.V[1] = fluffy::math3d::Point(1, 1, 10);    //!< b or 1
+   Cube.V[2] = fluffy::math3d::Point(-1, -1, 10);  //!< c or 2
+   Cube.V[3] = fluffy::math3d::Point(1, -1, 10);   //!< d or 3
+   Cube.V[4] = fluffy::math3d::Point(3, 1, 21);    //!< e or 4
+   Cube.V[5] = fluffy::math3d::Point(5, 1, 21);    //!< f or 5
+   Cube.V[6] = fluffy::math3d::Point(3, -1, 21);   //!< g or 6
+   Cube.V[7] = fluffy::math3d::Point(5, -1, 21);   //!< h or 7
+
+   /**
+    * Create the cube in screen ScreenCoord
+    */
+   for (size_t Idx = 0;                              //!<
+        Idx < sizeof(cube::V) / sizeof(cube::V[0]);  //!<
+        ++Idx                                        //!<
+   )
+   {
+      auto P = ScreenObjects.MatrixConversion * Cube.V[Idx];
+      Cube.Pixel[Idx] = {P.X, P.Y};
+   }
+   ScreenObjects.vCubes.push_back(Cube);
+
+   /**
+    * Create the spline to be rendered.
+    */
+   ScreenObjects.Spline1 = fluffy::splines::SplineTestCatmullRom();
+}
+
 };  // namespace
 
 //-----------------------------------------------------------------------------
@@ -511,6 +652,10 @@ int main(int argc, char *args[])
    }
    SDL_Log("TTF_OpenFont:  Loaded  font %s with size %i.", FontName.c_str(), PointSize);
 
+   /**
+    * Copy the font pointer into an object in ScreenObjects for reference only.
+    */
+   ScreenObjects.TextSplineInfo.ptrFont = ptrFont;
    ScreenObjects.FpsInfo.Output.ptrFont = ptrFont;
 
    SDL_Color textColor = {255, 255, 255};
@@ -532,18 +677,14 @@ int main(int argc, char *args[])
       return 1;
    }
 
-   cube Cube{};
-   Cube.Color = 0xFF0000;
-   Cube.Rotate = true;
-   Cube.UseColorGradient = UseColorGradient;
-   Cube.V[0] = fluffy::math3d::Point(-1, 1, 10);   //!< a or 0
-   Cube.V[1] = fluffy::math3d::Point(1, 1, 10);    //!< b or 1
-   Cube.V[2] = fluffy::math3d::Point(-1, -1, 10);  //!< c or 2
-   Cube.V[3] = fluffy::math3d::Point(1, -1, 10);   //!< d or 3
-   Cube.V[4] = fluffy::math3d::Point(3, 1, 21);    //!< e or 4
-   Cube.V[5] = fluffy::math3d::Point(5, 1, 21);    //!< f or 5
-   Cube.V[6] = fluffy::math3d::Point(3, -1, 21);   //!< g or 6
-   Cube.V[7] = fluffy::math3d::Point(5, -1, 21);   //!< h or 7
+   if (0 > SDL_SetSurfaceBlendMode(ptrScreenSurface, SDL_BLENDMODE_BLEND))
+   {
+      SDL_Log("Failed to set surface blend mode! SDL_Error: %s.", SDL_GetError());
+      SDL_DestroySurface(ptrScreenSurface);
+      SDL_DestroyWindow(ptrWindow);
+      SDL_Quit();
+      return 1;
+   }
 
    // Main loop flag
    bool Quit{};
@@ -551,29 +692,7 @@ int main(int argc, char *args[])
    // Event handler
    SDL_Event e{};
 
-   ScreenObjects.Projection = fluffy::render::Projection(gScreenDimension.PixelWidth, gScreenDimension.PixelHeight,
-                                                         fluffy::math3d::Deg2Rad(ScreenObjects.FOV), -10, 100);
-   ScreenObjects.MatrixProjection = fluffy::render::Projection(ScreenObjects.Projection);
-   ScreenObjects.MatrixScreen = fluffy::render::ScreenCoord(ScreenObjects.Projection);
-   ScreenObjects.MatrixConversion = ScreenObjects.MatrixScreen * ScreenObjects.MatrixProjection;
-
-   /**
-    * Create the cube in screen ScreenCoord
-    */
-   for (size_t Idx = 0;                              //!<
-        Idx < sizeof(cube::V) / sizeof(cube::V[0]);  //!<
-        ++Idx                                        //!<
-   )
-   {
-      auto P = ScreenObjects.MatrixConversion * Cube.V[Idx];
-      Cube.Pixel[Idx] = {P.X, P.Y};
-   }
-   ScreenObjects.vCubes.push_back(Cube);
-
-   /**
-    * Copy the font pointer into an object in ScreenObjects for reference only.
-    */
-   ScreenObjects.TextSplineInfo.ptrFont = ptrFont;
+   InitScreenObjects(ScreenObjects);
 
    int ScanCount{};
 

@@ -56,7 +56,13 @@ message(STATUS "sdl3_ttf_SOURCE_DIR: ${sdl3_ttf_SOURCE_DIR}")
 ##############################################################################
 # Add library target with source files
 ##############################################################################
-add_library(drawprimitives src/lib/drawprimitives.cpp src/lib/triangle2d.cpp src/lib/fluffymath.cpp)
+add_library(drawprimitives
+  src/lib/drawprimitives.cpp
+  src/lib/triangle2d.cpp
+  src/lib/fluffymath.cpp
+  src/lib/splines.cpp
+  src/lib/memcheck.cpp
+)
 
 ##############################################################################
 # Link SDL libraries to the executable
@@ -64,6 +70,15 @@ add_library(drawprimitives src/lib/drawprimitives.cpp src/lib/triangle2d.cpp src
 # include folders to anyone linking to the library.
 ##############################################################################
 target_link_libraries(drawprimitives PUBLIC SDL3::SDL3-static SDL3_ttf::SDL3_ttf-static)
+
+##############################################################################
+# Make it possible to override the memory allocation from the command line.
+# e.g: use -DFLUFFY_OVR_MEMALLOC=1 when running cmake to use the code from
+#      the memcheck.cpp file included above.
+##############################################################################
+if(FLUFFY_OVR_MEMALLOC)
+  target_compile_definitions(drawprimitives PRIVATE FLUFFY_OVR_MEMALLOC)
+endif()
 
 add_executable(triangle apps/triangle.cpp )
 target_link_libraries(triangle PRIVATE drawprimitives)
@@ -100,7 +115,15 @@ enable_testing()
 set(TEST_FILES tests/test1.cpp)
 
 # Add test executable
-add_executable(tests ${TEST_FILES} src/lib/triangle2d.cpp src/lib/fluffymath.cpp)
+add_executable(tests ${TEST_FILES}
+  src/lib/triangle2d.cpp
+  src/lib/fluffymath.cpp
+  src/lib/splines.cpp
+  src/lib/memcheck.cpp
+)
+if(FLUFFY_OVR_MEMALLOC)
+  target_compile_definitions(tests PRIVATE FLUFFY_OVR_MEMALLOC)
+endif()
 
 # Link test executable with Catch2 and your project libraries
 target_link_libraries(tests Catch2::Catch2WithMain)

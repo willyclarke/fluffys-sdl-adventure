@@ -1,13 +1,18 @@
-#include <cmath>
-#include <iomanip>  // for std::setprecision
-#include <iostream>
+/**
+ * Fluffy's 3D math library.
+ */
 
 /**
  * License : MIT. See bottom of file.
  * Copyright : Willy Clarke.
  */
 
+#include <cmath>
+#include <iomanip>  // for std::setprecision
+#include <iostream>
+
 #include "fluffymath.hpp"
+
 namespace fluffy
 {
 namespace math3d
@@ -23,8 +28,30 @@ auto Deg2Rad(FLOAT Angle) -> FLOAT { return M_PI * Angle / FLOAT(180); }
 //------------------------------------------------------------------------------
 tup Negate(tup const &Tup)
 {
-   tup const Result{-Tup.X, -Tup.Y, -Tup.Z, -Tup.W};
+   tup const Result{-Tup.X, -Tup.Y, -Tup.Z, Tup.W};
    return (Result);
+}
+
+/**
+ * Return the magnitude squared of a vector.
+ * NOTE: The W of the tuple is ignored when computing the result.
+ */
+FLOAT MagSquared(tup const &Vector)
+{
+   // Assert(Vector.W == FLOAT(0), __FUNCTION__, __LINE__);
+
+   FLOAT Result = Vector.X * Vector.X + Vector.Y * Vector.Y + Vector.Z * Vector.Z;
+   return Result;
+}
+
+/**
+ * Return the magnitude of a vector. This corresponds to the length of the vector.
+ */
+FLOAT Mag(tup const &Vector)
+{
+   FLOAT Result = std::sqrt(MagSquared(Vector));
+
+   return Result;
 }
 
 //------------------------------------------------------------------------------
@@ -40,19 +67,6 @@ tup Mul(tup const A, tup const B)
    tup const Result{A.R * B.R, A.G * B.G, A.B * B.B, A.W * B.W};
    return (Result);
 }
-
-//------------------------------------------------------------------------------
-FLOAT MagSquared(tup const &Tup)
-{
-   FLOAT const Result = Tup.X * Tup.X +  //<!
-                        Tup.Y * Tup.Y +  //<!
-                        Tup.Z * Tup.Z +  //<!
-                        Tup.W * Tup.W;   //<!
-   return (Result);
-}
-
-//------------------------------------------------------------------------------
-FLOAT Mag(tup const &Tup) { return (std::sqrt(MagSquared(Tup))); }
 
 //------------------------------------------------------------------------------
 tup Normalize(tup const &Tup)
@@ -83,6 +97,9 @@ tup Vector(FLOAT A, FLOAT B, FLOAT C)
 }
 
 //------------------------------------------------------------------------------
+/**
+ * Returns a tuple with W=0 meaning that the result is a vector.
+ */
 tup Vector(tup A)
 {
    // ---
@@ -90,6 +107,17 @@ tup Vector(tup A)
    // --
    A.W = FLOAT(0);
    return A;
+}
+
+/**
+ * Returns a tuple that makes a the vector 'From' till 'To'.
+ * The W is set to 0 meaning that the result is a Vector.
+ */
+tup Vector(tup const &To, tup const &From)
+{
+   tup Result = To - From;
+   Result.W = FLOAT(0);
+   return Result;
 }
 
 //------------------------------------------------------------------------------
@@ -770,7 +798,7 @@ matrix TranslateScaleRotate(                   //!<
 /**
  * Initialize the Catmull Rom matrix.
  */
-auto SplineInitCatmullRom() -> matrix
+auto SplineMatrixCatmullRom() -> matrix
 {
    matrix M = I();
 
@@ -840,8 +868,21 @@ auto MultSpline(fluffy::math3d::FLOAT u, matrix const &M) -> tup
    auto uCubic = uSquared * u;
    auto V = tup{fluffy::math3d::FLOAT(1), u, uSquared, uCubic};
    auto P = V * M;
+   P.W = fluffy::math3d::FLOAT(1);  //!< Ensure that the point can be referenced with W=1.
    return P;
 }
+
+/**
+ * Linear extrapolation between two points.
+ * NOTE: Always returns a point, so W=1.
+ */
+auto Lerp(tup const &P0, tup const &P1, FLOAT t) -> tup
+{
+   auto Pt = (FLOAT(1) - t) * P0 + t * P1;
+   Pt.W = FLOAT(1);
+   return Pt;
+}
+
 };  // end of namespace math3d
 };  // end of namespace fluffy
 
@@ -941,6 +982,10 @@ fluffy::math3d::tup operator-(fluffy::math3d::tup const &A, fluffy::math3d::tup 
 
 fluffy::math3d::tup operator*(fluffy::math3d::FLOAT const S, fluffy::math3d::tup const &B)
 {
+   /**
+    * NOTE: The scaling need to be applied to W in order to get the spline
+    * calculations to work.
+    */
    return fluffy::math3d::tup{S * B.X, S * B.Y, S * B.Z, S * B.W};
 }
 

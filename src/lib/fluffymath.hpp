@@ -1,12 +1,16 @@
 #ifndef FLUFFY_FLUFFYMATH_HPP_D3C5C0B4_20C1_4CBF_9C68_961E59FF5A48
 #define FLUFFY_FLUFFYMATH_HPP_D3C5C0B4_20C1_4CBF_9C68_961E59FF5A48
+/**
+ * Fluffy's 3D math library.
+ */
 
 /**
  * License : MIT. See bottom of file.
  * Copyright : Willy Clarke.
  */
 
-#include <tuple>
+#include <iostream>
+
 namespace fluffy
 {
 
@@ -127,6 +131,8 @@ bool ApproxEq(FLOAT A, FLOAT B, FLOAT Tolerance);
 /**
  * Tuple functions.
  */
+FLOAT MagSquared(tup const &Vector);
+FLOAT Mag(tup const &Vector);
 tup Mul(tup const A, tup const B);
 tup Mul(fluffy::math3d::FLOAT const S, tup const &Tup);
 tup Negate(tup const &Tup);
@@ -138,6 +144,7 @@ tup Sub(tup const &A, tup const &B);
 tup Sin(tup const &Input);
 tup Vector(fluffy::math3d::FLOAT A, fluffy::math3d::FLOAT B, fluffy::math3d::FLOAT C);
 tup Vector(tup A);
+tup Vector(tup const &To, tup const &From);
 tup VectorXZY(fluffy::math3d::FLOAT X, fluffy::math3d::FLOAT Y, fluffy::math3d::FLOAT Z);
 tup VectorXY(fluffy::math3d::FLOAT X, fluffy::math3d::FLOAT Y);
 tup VectorXYZ(tup const &A);
@@ -193,9 +200,10 @@ matrix TranslateScaleRotate(  //!<
     fluffy::math3d::FLOAT AlfaZ  //!< Input rotation in radians.
 );
 
-auto SplineInitCatmullRom() -> matrix;
+auto SplineMatrixCatmullRom() -> matrix;
 auto MultSpline(fluffy::math3d::FLOAT u, matrix const &M) -> tup;
 auto MultSpline(matrix const &M, tup const &P0, tup const &P1, tup const &P2, tup const &P3) -> matrix;
+auto Lerp(tup const &P0, tup const &P1, FLOAT t) -> tup;
 
 };  // end of namespace math3d
 };  // end of namespace fluffy
