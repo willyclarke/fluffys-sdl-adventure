@@ -88,6 +88,8 @@ auto DrawCircle(SDL_Surface* screenSurface,                //!<
       }
       ((Uint32*)screenSurface->pixels)[Y * screenSurface->w + X] = Color;
 
+      if (Radius < 2) break;
+
       Angle += AngleDelta;
    }
 }
