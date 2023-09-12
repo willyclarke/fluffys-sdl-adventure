@@ -34,10 +34,11 @@ tup Negate(tup const &Tup)
 
 /**
  * Return the magnitude squared of a vector.
+ * NOTE: The W of the tuple is ignored when computing the result.
  */
 FLOAT MagSquared(tup const &Vector)
 {
-   Assert(Vector.W == FLOAT(0), __FUNCTION__, __LINE__);
+   // Assert(Vector.W == FLOAT(0), __FUNCTION__, __LINE__);
 
    FLOAT Result = Vector.X * Vector.X + Vector.Y * Vector.Y + Vector.Z * Vector.Z;
    return Result;
