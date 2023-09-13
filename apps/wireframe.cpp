@@ -174,18 +174,19 @@ void ProcessState(screen_objects &ScreenObjects)
    {
       AS.State = app_state::UPDATE;
       AS.Count = 0;
+
+      /**
+       * Ensure that there is a maximum number of splines to be re-drawn.
+       */
       if (SO.vSplineCatmullRom.size() > 10)
       {
          SO.vSplineCatmullRom.erase(SO.vSplineCatmullRom.begin());
-         SDL_Log("Deleting the first element of the vSplineCatmullRom");
       }
 
       auto DeltatColor = fluffy::math3d::FLOAT(1) / SO.vSplineCatmullRom.size();
       AS.tColorLerp > 1 ? AS.tColorLerp = 0 : AS.tColorLerp += DeltatColor;
       auto ColorCatmR = fluffy::math3d::Lerp({0, 0.5, 0.5}, {1, 1, 1}, AS.tColorLerp);
       ColorCatmR = fluffy::math3d::Normalize(ColorCatmR);
-
-      SDL_Log("Creating spline with color %f %f %f", float(ColorCatmR.R), float(ColorCatmR.G), float(ColorCatmR.B));
       SO.vSplineCatmullRom.push_back(CreateSpline(ColorCatmR));
    }
    else if (AS.State == app_state::UPDATE)
@@ -201,7 +202,6 @@ void ProcessState(screen_objects &ScreenObjects)
 
    if (AS.State != AS.PrvState)
    {
-      SDL_Log("%s -> NEW state is %s", __FUNCTION__, Stringify(AS));
       AS.PrvState = AS.State;
    }
 }
@@ -334,7 +334,7 @@ void Render(SDL_Surface *screenSurface, screen_objects &ScreenObjects)
          auto ProjectedPoint = ScreenObjects.MatrixProjection * ScreenPoint;
          fluffy::render::vertice_2d Vert{ProjectedPoint.X, ProjectedPoint.Y};
 
-         static bool DebugPrint{};
+         static bool DebugPrint{true};
          if (!DebugPrint && RadiusInPixels == 30)
          {
             DebugPrint = true;
@@ -695,6 +695,8 @@ int main(int argc, char *args[])
    InitScreenObjects(ScreenObjects);
 
    int ScanCount{};
+   SDL_bool IsFullscreen{};
+   Uint32 fullscreenFlag = SDL_WINDOW_FULLSCREEN;
 
    // Main loop
    while (!Quit)
@@ -706,6 +708,20 @@ int main(int argc, char *args[])
       {
          switch (e.type)
          {
+            case SDL_EVENT_KEY_DOWN:
+            {
+               // Check for Cmd-'F'/Super-F/Windows-F key press
+               if (e.key.keysym.sym == SDLK_f && (e.key.keysym.mod & SDL_KMOD_GUI))
+               {
+                  // Toggle fullscreen
+                  IsFullscreen = SDL_bool::SDL_TRUE == IsFullscreen ? SDL_bool::SDL_FALSE : SDL_bool::SDL_TRUE;
+                  if (0 > SDL_SetWindowFullscreen(ptrWindow, IsFullscreen))
+                  {
+                     SDL_Log("Failed to switch Window between fullscreen/windowed! SDL_Error: %s.", SDL_GetError());
+                  }
+               }
+            }
+            break;
             case SDL_EVENT_WINDOW_RESIZED:
             {
                if (e.window.type == SDL_EVENT_WINDOW_RESIZED)
