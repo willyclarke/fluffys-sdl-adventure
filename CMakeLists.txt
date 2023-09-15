@@ -86,6 +86,9 @@ target_link_libraries(triangle PRIVATE drawprimitives)
 add_executable(wireframe apps/wireframe.cpp)
 target_link_libraries(wireframe PRIVATE drawprimitives)
 
+add_executable(readmemalloc apps/readmemalloc.cpp)
+target_link_libraries(readmemalloc PRIVATE drawprimitives)
+
 if(APPLE)
   set(APPNAME FluffyDalek)
   set(MACOSX_BUNDLE ON)
